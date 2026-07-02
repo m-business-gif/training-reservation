@@ -415,7 +415,7 @@ export default function BookingPage() {
                     type="text"
                     value={customerName}
                     onChange={e => setCustomerName(e.target.value)}
-                    className="w-full border-2 border-gray-300 rounded-lg px-4 py-4 text-lg"
+                    className="w-full border-2 border-gray-300 rounded-lg px-4 py-4 text-lg text-gray-900 font-bold"
                     placeholder="山田 太郎"
                   />
                 </div>
@@ -426,7 +426,7 @@ export default function BookingPage() {
                     type="tel"
                     value={customerPhone}
                     onChange={e => setCustomerPhone(e.target.value)}
-                    className="w-full border-2 border-gray-300 rounded-lg px-4 py-4 text-lg"
+                    className="w-full border-2 border-gray-300 rounded-lg px-4 py-4 text-lg text-gray-900 font-bold"
                     placeholder="090-1234-5678"
                   />
                 </div>
@@ -437,10 +437,10 @@ export default function BookingPage() {
                     type="email"
                     value={customerEmail}
                     onChange={e => setCustomerEmail(e.target.value)}
-                    className="w-full border-2 border-gray-300 rounded-lg px-4 py-4 text-lg"
+                    className="w-full border-2 border-gray-300 rounded-lg px-4 py-4 text-lg text-gray-900 font-bold"
                     placeholder="example@gmail.com"
                   />
-                  <p className="text-sm text-gray-900 mt-2">※ 予約確認メールが届きます</p>
+                  <p className="text-base text-gray-900 font-bold mt-2">※ 予約確認メールが届きます</p>
                 </div>
 
                 <button
