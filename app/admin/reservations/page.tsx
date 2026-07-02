@@ -205,14 +205,8 @@ export default function ReservationsPage() {
             </div>
           </button>
 
-          <button
-            onClick={() => {
-              setSelectedDate(format(new Date(), 'yyyy-MM-dd'))
-              setViewMode('list')
-            }}
-            className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-all text-left"
-          >
-            <div className="flex items-center gap-4">
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center gap-4 mb-4">
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
                 <span className="text-2xl">📋</span>
               </div>
@@ -220,12 +214,29 @@ export default function ReservationsPage() {
                 <h2 className="text-xl font-bold text-gray-900">本日の予約一覧</h2>
                 <p className="text-base text-gray-900">TODAY'S RESERVE LIST</p>
               </div>
-              <div className="text-right">
-                <div className="text-3xl font-bold text-green-600">{todayCount}</div>
-                <div className="text-sm text-gray-900 font-bold">件</div>
-              </div>
             </div>
-          </button>
+            <div className="border-t-2 border-gray-200 pt-4 space-y-2 max-h-64 overflow-y-auto">
+              {reservations.filter(r => r.date === format(new Date(), 'yyyy-MM-dd') && r.status === 'confirmed').length === 0 ? (
+                <p className="text-gray-900 text-base text-center py-4">本日の予約はありません</p>
+              ) : (
+                reservations
+                  .filter(r => r.date === format(new Date(), 'yyyy-MM-dd') && r.status === 'confirmed')
+                  .map(r => (
+                    <div key={r.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div>
+                        <div className="flex items-center gap-3">
+                          <span className="font-bold text-indigo-600 text-base">{r.start_time.slice(0, 5)}</span>
+                          <span className="font-bold text-gray-900 text-base">{r.trainee?.name}</span>
+                          <span className="text-gray-900 text-base">-</span>
+                          <span className="font-bold text-gray-900 text-base">{r.customer_name}様</span>
+                        </div>
+                        <div className="text-sm text-gray-900 mt-1">{r.menu?.name}</div>
+                      </div>
+                    </div>
+                  ))
+              )}
+            </div>
+          </div>
         </div>
 
         {/* 週間予約状況 */}
