@@ -183,29 +183,49 @@ export default function ReservationsPage() {
 
         {/* サマリーカード */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div className="bg-white rounded-lg shadow p-6">
+          <button
+            onClick={() => {
+              setSelectedDate(format(new Date(), 'yyyy-MM-dd'))
+              setViewMode('timeline')
+            }}
+            className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-all text-left"
+          >
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
                 <span className="text-2xl">📅</span>
               </div>
-              <div>
+              <div className="flex-1">
                 <h2 className="text-xl font-bold text-gray-900">本日のスケジュール</h2>
                 <p className="text-base text-gray-900">TODAY'S SCHEDULE</p>
               </div>
+              <div className="text-right">
+                <div className="text-3xl font-bold text-blue-600">{todayCount}</div>
+                <div className="text-sm text-gray-900 font-bold">件</div>
+              </div>
             </div>
-          </div>
+          </button>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <button
+            onClick={() => {
+              setSelectedDate(format(new Date(), 'yyyy-MM-dd'))
+              setViewMode('list')
+            }}
+            className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-all text-left"
+          >
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
                 <span className="text-2xl">📋</span>
               </div>
-              <div>
+              <div className="flex-1">
                 <h2 className="text-xl font-bold text-gray-900">本日の予約一覧</h2>
                 <p className="text-base text-gray-900">TODAY'S RESERVE LIST</p>
               </div>
+              <div className="text-right">
+                <div className="text-3xl font-bold text-green-600">{todayCount}</div>
+                <div className="text-sm text-gray-900 font-bold">件</div>
+              </div>
             </div>
-          </div>
+          </button>
         </div>
 
         {/* 週間予約状況 */}
