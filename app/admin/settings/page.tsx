@@ -139,7 +139,7 @@ export default function SettingsPage() {
               value={notificationEmail}
               onChange={e => setNotificationEmail(e.target.value)}
               placeholder="example@gmail.com"
-              className="flex-1 border-2 border-gray-300 rounded-lg px-3 py-3 text-base"
+              className="flex-1 border-2 border-gray-300 rounded-lg px-3 py-3 text-base text-gray-900 font-bold"
             />
             <button
               onClick={saveEmail}
