@@ -196,13 +196,13 @@ export default function SettingsPage() {
               value={newMenuName}
               onChange={e => setNewMenuName(e.target.value)}
               placeholder="メニュー名"
-              className="flex-1 border-2 border-gray-300 rounded-lg px-3 py-3 text-base"
+              className="flex-1 border-2 border-gray-300 rounded-lg px-3 py-3 text-base text-gray-900 font-bold"
             />
             <input
               type="number"
               value={newMenuDuration}
               onChange={e => setNewMenuDuration(Number(e.target.value))}
-              className="w-24 border-2 border-gray-300 rounded-lg px-3 py-3 text-base font-bold"
+              className="w-24 border-2 border-gray-300 rounded-lg px-3 py-3 text-base font-bold text-gray-900"
             />
             <span className="flex items-center text-base text-gray-900 font-bold">分</span>
             <button
