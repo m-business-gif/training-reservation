@@ -123,8 +123,8 @@ export default function SettingsPage() {
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-gray-900">基本設定</h1>
-          <Link href="/" className="text-base font-bold text-gray-900 hover:text-indigo-600">
-            ← トップに戻る
+          <Link href="/admin" className="text-base font-bold text-gray-900 hover:text-indigo-600">
+            ← 管理画面トップ
           </Link>
         </div>
 
