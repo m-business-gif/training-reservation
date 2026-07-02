@@ -30,6 +30,10 @@ export default function ReservationsPage() {
   const [addCustomerPhone, setAddCustomerPhone] = useState('')
   const [addCustomerEmail, setAddCustomerEmail] = useState('')
 
+  // 予約詳細モーダル
+  const [showDetailModal, setShowDetailModal] = useState(false)
+  const [selectedReservation, setSelectedReservation] = useState<ReservationWithDetails | null>(null)
+
   useEffect(() => {
     loadTrainees()
     loadMenus()
@@ -107,9 +111,16 @@ export default function ReservationsPage() {
 
     if (!error) {
       alert('✅ キャンセルしました')
+      setShowDetailModal(false)
       loadReservations()
       loadWeeklyStats()
     }
+  }
+
+  // 予約詳細を表示
+  function showReservationDetail(reservation: ReservationWithDetails) {
+    setSelectedReservation(reservation)
+    setShowDetailModal(true)
   }
 
   // 手動予約追加
@@ -121,6 +132,20 @@ export default function ReservationsPage() {
     setAddCustomerPhone('')
     setAddCustomerEmail('')
     setShowAddModal(true)
+  }
+
+  // 8桁の予約番号を生成（重複チェック付き）
+  async function generateReservationNumber(): Promise<string> {
+    while (true) {
+      const number = Math.floor(10000000 + Math.random() * 90000000).toString()
+      const { data } = await supabase
+        .from('reservation')
+        .select('id')
+        .eq('reservation_number', number)
+        .single()
+
+      if (!data) return number
+    }
   }
 
   async function handleAddReservation() {
@@ -141,7 +166,11 @@ export default function ReservationsPage() {
     const endM = endMinutes % 60
     const endTime = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}:00`
 
+    // 予約番号を生成
+    const reservationNumber = await generateReservationNumber()
+
     const { error } = await supabase.from('reservation').insert({
+      reservation_number: reservationNumber,
       trainee_id: addTraineeId,
       menu_id: addMenuId,
       date: selectedDate,
@@ -156,7 +185,7 @@ export default function ReservationsPage() {
     if (error) {
       alert('予約追加に失敗しました: ' + error.message)
     } else {
-      alert('✅ 予約を追加しました')
+      alert('✅ 予約を追加しました\n予約番号: ' + reservationNumber)
       setShowAddModal(false)
       loadReservations()
       loadWeeklyStats()
@@ -284,7 +313,7 @@ export default function ReservationsPage() {
               type="date"
               value={selectedDate}
               onChange={e => setSelectedDate(e.target.value)}
-              className="border-2 border-gray-300 rounded-lg px-3 py-2 text-base"
+              className="border-2 border-gray-300 rounded-lg px-3 py-2 text-base text-gray-900 font-bold"
             />
           </div>
           <div className="flex gap-2">
@@ -363,7 +392,10 @@ export default function ReservationsPage() {
                           key={res.id}
                           className="absolute top-1 bottom-1 bg-indigo-100 border-l-4 border-indigo-600 rounded px-2 py-1 overflow-hidden cursor-pointer hover:bg-indigo-200 transition-colors group"
                           style={{ left: `${left}%`, width: `${width}%` }}
-                          onClick={() => handleCancel(res.id)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            showReservationDetail(res)
+                          }}
                         >
                           <div className="text-xs font-bold text-indigo-900">
                             {res.start_time.slice(0, 5)} 〜 {res.end_time.slice(0, 5)}
@@ -375,7 +407,7 @@ export default function ReservationsPage() {
                             {res.customer_name}
                           </div>
                           <div className="hidden group-hover:block absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg p-2 text-xs whitespace-nowrap z-10">
-                            クリックでキャンセル
+                            クリックで詳細表示
                           </div>
                         </div>
                       )
@@ -429,6 +461,87 @@ export default function ReservationsPage() {
                   この日の予約はありません
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* 予約詳細モーダル */}
+        {showDetailModal && selectedReservation && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-lg w-full">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-2xl font-bold text-gray-900">予約詳細</h2>
+                  <button
+                    onClick={() => setShowDetailModal(false)}
+                    className="text-gray-500 hover:text-gray-900 text-3xl leading-none"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {selectedReservation.reservation_number && (
+                    <div className="bg-indigo-50 rounded-lg p-4">
+                      <p className="text-sm text-gray-900 font-bold mb-1">予約番号</p>
+                      <p className="text-3xl font-bold text-indigo-600">{selectedReservation.reservation_number}</p>
+                    </div>
+                  )}
+
+                  <div className="border-t-2 border-gray-200 pt-4">
+                    <p className="text-sm text-gray-900 font-bold mb-2">日時</p>
+                    <p className="text-xl font-bold text-gray-900">
+                      {format(new Date(selectedReservation.date), 'M月d日(E)', { locale: ja })}
+                    </p>
+                    <p className="text-lg font-bold text-gray-900">
+                      {selectedReservation.start_time.slice(0, 5)} 〜 {selectedReservation.end_time.slice(0, 5)}
+                    </p>
+                  </div>
+
+                  <div className="border-t-2 border-gray-200 pt-4">
+                    <p className="text-sm text-gray-900 font-bold mb-1">研修生</p>
+                    <p className="text-lg font-bold text-gray-900">{selectedReservation.trainee?.name}</p>
+                  </div>
+
+                  <div className="border-t-2 border-gray-200 pt-4">
+                    <p className="text-sm text-gray-900 font-bold mb-1">メニュー</p>
+                    <p className="text-lg font-bold text-gray-900">{selectedReservation.menu?.name}</p>
+                    <p className="text-base text-gray-900">({selectedReservation.menu?.duration_minutes}分)</p>
+                  </div>
+
+                  <div className="border-t-2 border-gray-200 pt-4">
+                    <p className="text-sm text-gray-900 font-bold mb-1">お客様名</p>
+                    <p className="text-lg font-bold text-gray-900">{selectedReservation.customer_name}様</p>
+                  </div>
+
+                  <div className="border-t-2 border-gray-200 pt-4">
+                    <p className="text-sm text-gray-900 font-bold mb-1">電話番号</p>
+                    <p className="text-lg font-bold text-gray-900">{selectedReservation.customer_phone}</p>
+                  </div>
+
+                  {selectedReservation.customer_email && (
+                    <div className="border-t-2 border-gray-200 pt-4">
+                      <p className="text-sm text-gray-900 font-bold mb-1">メールアドレス</p>
+                      <p className="text-base text-gray-900">{selectedReservation.customer_email}</p>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3 pt-4">
+                    <button
+                      onClick={() => handleCancel(selectedReservation.id)}
+                      className="flex-1 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold text-lg"
+                    >
+                      この予約をキャンセル
+                    </button>
+                    <button
+                      onClick={() => setShowDetailModal(false)}
+                      className="px-6 py-3 bg-gray-200 text-gray-900 rounded-lg hover:bg-gray-300 font-bold text-lg"
+                    >
+                      閉じる
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -494,7 +607,7 @@ export default function ReservationsPage() {
                       value={addCustomerName}
                       onChange={e => setAddCustomerName(e.target.value)}
                       placeholder="山田 太郎"
-                      className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-base text-gray-900"
+                      className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-base text-gray-900 font-bold"
                     />
                   </div>
 
@@ -505,7 +618,7 @@ export default function ReservationsPage() {
                       value={addCustomerPhone}
                       onChange={e => setAddCustomerPhone(e.target.value)}
                       placeholder="090-1234-5678"
-                      className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-base text-gray-900"
+                      className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-base text-gray-900 font-bold"
                     />
                   </div>
 
@@ -516,7 +629,7 @@ export default function ReservationsPage() {
                       value={addCustomerEmail}
                       onChange={e => setAddCustomerEmail(e.target.value)}
                       placeholder="example@gmail.com"
-                      className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-base text-gray-900"
+                      className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-base text-gray-900 font-bold"
                     />
                   </div>
 

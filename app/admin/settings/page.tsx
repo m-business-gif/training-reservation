@@ -160,7 +160,7 @@ export default function SettingsPage() {
               value={newTraineeName}
               onChange={e => setNewTraineeName(e.target.value)}
               placeholder="研修生の名前"
-              className="flex-1 border-2 border-gray-300 rounded-lg px-3 py-3 text-base"
+              className="flex-1 border-2 border-gray-300 rounded-lg px-3 py-3 text-base text-gray-900 font-bold"
               onKeyDown={e => e.key === 'Enter' && addTrainee()}
             />
             <button

@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS shift (
 -- 4. 予約テーブル
 CREATE TABLE IF NOT EXISTS reservation (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  reservation_number TEXT UNIQUE,
   trainee_id UUID NOT NULL REFERENCES trainee(id),
   menu_id UUID NOT NULL REFERENCES menu(id),
   date DATE NOT NULL,
@@ -51,6 +52,7 @@ CREATE TABLE IF NOT EXISTS reservation (
   end_time TIME NOT NULL,
   customer_name TEXT NOT NULL,
   customer_phone TEXT NOT NULL,
+  customer_email TEXT,
   status TEXT DEFAULT 'confirmed' CHECK (status IN ('confirmed', 'cancelled')),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   cancelled_at TIMESTAMPTZ

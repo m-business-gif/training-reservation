@@ -159,6 +159,20 @@ export default function BookingPage() {
     loadTimes()
   }, [selectedMenu, selectedTrainee, selectedDate])
 
+  // 8桁の予約番号を生成（重複チェック付き）
+  async function generateReservationNumber(): Promise<string> {
+    while (true) {
+      const number = Math.floor(10000000 + Math.random() * 90000000).toString()
+      const { data } = await supabase
+        .from('reservation')
+        .select('id')
+        .eq('reservation_number', number)
+        .single()
+
+      if (!data) return number
+    }
+  }
+
   // 予約確定
   async function handleSubmit() {
     if (!selectedMenu || !selectedTrainee || !selectedDate || !selectedTime || !customerName || !customerPhone) {
@@ -176,8 +190,12 @@ export default function BookingPage() {
     const endM = endMinutes % 60
     const endTime = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}:00`
 
+    // 予約番号を生成
+    const reservationNumber = await generateReservationNumber()
+
     // 予約をデータベースに保存
     const { error } = await supabase.from('reservation').insert({
+      reservation_number: reservationNumber,
       trainee_id: selectedTrainee.id,
       menu_id: selectedMenu.id,
       date: selectedDate,
@@ -196,7 +214,7 @@ export default function BookingPage() {
       return
     }
 
-    alert('✅ 予約が完了しました！\n\n予約内容:\n日時: ' + format(new Date(selectedDate), 'M月d日(E)', { locale: ja }) + ' ' + selectedTime + '\n研修生: ' + selectedTrainee.name + '\nメニュー: ' + selectedMenu.name)
+    alert('✅ 予約が完了しました！\n\n【予約番号】\n' + reservationNumber + '\n\n予約内容:\n日時: ' + format(new Date(selectedDate), 'M月d日(E)', { locale: ja }) + ' ' + selectedTime + '\n研修生: ' + selectedTrainee.name + '\nメニュー: ' + selectedMenu.name + '\n\n※予約番号は予約確認・キャンセル時に必要です。')
 
     // リセット
     setStep(1)
@@ -433,10 +451,12 @@ export default function BookingPage() {
           )}
         </div>
 
-        <div className="text-center mt-6">
-          <a href="/" className="text-gray-900 hover:text-gray-900 text-base font-medium">
-            ← トップに戻る
-          </a>
+        <div className="text-center mt-6 space-y-3">
+          <div>
+            <a href="/my-reservation" className="text-indigo-600 hover:text-indigo-700 text-base font-bold">
+              予約の確認・キャンセルはこちら →
+            </a>
+          </div>
         </div>
       </div>
     </div>

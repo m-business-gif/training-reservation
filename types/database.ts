@@ -37,6 +37,7 @@ export interface Shift {
 
 export interface Reservation {
   id: string
+  reservation_number: string | null
   trainee_id: string
   menu_id: string
   date: string
@@ -44,6 +45,7 @@ export interface Reservation {
   end_time: string
   customer_name: string
   customer_phone: string
+  customer_email: string | null
   status: 'confirmed' | 'cancelled'
   created_at: string
   cancelled_at: string | null
