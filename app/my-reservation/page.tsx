@@ -68,35 +68,35 @@ export default function MyReservationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">予約確認・キャンセル</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 sm:mb-8 text-center">予約確認・キャンセル</h1>
 
         {!reservation ? (
-          <div className="bg-white rounded-lg shadow-lg p-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">予約情報を入力してください</h2>
+          <div className="bg-white rounded-lg shadow-lg p-4 sm:p-8">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">予約情報を入力してください</h2>
 
-            <div className="space-y-5">
+            <div className="space-y-4 sm:space-y-5">
               <div>
-                <label className="block text-base font-bold text-gray-900 mb-3">予約番号 *</label>
+                <label className="block text-sm sm:text-base font-bold text-gray-900 mb-2 sm:mb-3">予約番号 *</label>
                 <input
                   type="text"
                   value={reservationNumber}
                   onChange={e => setReservationNumber(e.target.value)}
-                  className="w-full border-2 border-gray-300 rounded-lg px-4 py-4 text-lg text-gray-900 font-bold"
+                  className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 sm:py-4 text-base sm:text-lg text-gray-900 font-bold"
                   placeholder="12345678"
                   maxLength={8}
                 />
-                <p className="text-sm text-gray-900 mt-2">※ 予約完了時に表示された8桁の番号</p>
+                <p className="text-xs sm:text-sm text-gray-900 mt-2">※ 予約完了時に表示された8桁の番号</p>
               </div>
 
               <div>
-                <label className="block text-base font-bold text-gray-900 mb-3">電話番号 *</label>
+                <label className="block text-sm sm:text-base font-bold text-gray-900 mb-2 sm:mb-3">電話番号 *</label>
                 <input
                   type="tel"
                   value={customerPhone}
                   onChange={e => setCustomerPhone(e.target.value)}
-                  className="w-full border-2 border-gray-300 rounded-lg px-4 py-4 text-lg text-gray-900 font-bold"
+                  className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 sm:py-4 text-base sm:text-lg text-gray-900 font-bold"
                   placeholder="090-1234-5678"
                 />
               </div>
@@ -111,57 +111,57 @@ export default function MyReservationPage() {
               <button
                 onClick={handleSearch}
                 disabled={loading}
-                className="w-full py-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-bold text-xl disabled:bg-gray-400"
+                className="w-full py-3 sm:py-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 active:bg-indigo-700 font-bold text-lg sm:text-xl disabled:bg-gray-400"
               >
                 {loading ? '検索中...' : '予約を確認する'}
               </button>
             </div>
           </div>
         ) : (
-          <div className="bg-white rounded-lg shadow-lg p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">予約内容</h2>
+          <div className="bg-white rounded-lg shadow-lg p-4 sm:p-8">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">予約内容</h2>
 
             {reservation.status === 'cancelled' ? (
-              <div className="bg-red-50 border-2 border-red-300 rounded-lg p-6 mb-6">
-                <p className="text-xl font-bold text-red-900">この予約はキャンセル済みです</p>
+              <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 sm:p-6 mb-4 sm:mb-6">
+                <p className="text-lg sm:text-xl font-bold text-red-900">この予約はキャンセル済みです</p>
               </div>
             ) : (
-              <div className="bg-indigo-50 rounded-lg p-6 mb-6">
-                <div className="space-y-4">
+              <div className="bg-indigo-50 rounded-lg p-4 sm:p-6 mb-4 sm:mb-6">
+                <div className="space-y-3 sm:space-y-4">
                   <div>
-                    <p className="text-sm text-gray-900 font-bold">予約番号</p>
-                    <p className="text-2xl font-bold text-indigo-600">{reservation.reservation_number}</p>
+                    <p className="text-xs sm:text-sm text-gray-900 font-bold">予約番号</p>
+                    <p className="text-xl sm:text-2xl font-bold text-indigo-600">{reservation.reservation_number}</p>
                   </div>
 
-                  <div className="border-t-2 border-indigo-200 pt-4">
-                    <p className="text-sm text-gray-900 font-bold mb-2">日時</p>
-                    <p className="text-xl font-bold text-gray-900">
+                  <div className="border-t-2 border-indigo-200 pt-3 sm:pt-4">
+                    <p className="text-xs sm:text-sm text-gray-900 font-bold mb-1 sm:mb-2">日時</p>
+                    <p className="text-lg sm:text-xl font-bold text-gray-900">
                       {format(new Date(reservation.date), 'M月d日(E)', { locale: ja })}
                     </p>
-                    <p className="text-lg font-bold text-gray-900">
+                    <p className="text-base sm:text-lg font-bold text-gray-900">
                       {reservation.start_time.slice(0, 5)} 〜 {reservation.end_time.slice(0, 5)}
                     </p>
                   </div>
 
-                  <div className="border-t-2 border-indigo-200 pt-4">
-                    <p className="text-sm text-gray-900 font-bold">研修生</p>
-                    <p className="text-lg font-bold text-gray-900">{reservation.trainee?.name}</p>
+                  <div className="border-t-2 border-indigo-200 pt-3 sm:pt-4">
+                    <p className="text-xs sm:text-sm text-gray-900 font-bold">研修生</p>
+                    <p className="text-base sm:text-lg font-bold text-gray-900">{reservation.trainee?.name}</p>
                   </div>
 
-                  <div className="border-t-2 border-indigo-200 pt-4">
-                    <p className="text-sm text-gray-900 font-bold">メニュー</p>
-                    <p className="text-lg font-bold text-gray-900">{reservation.menu?.name}</p>
-                    <p className="text-base text-gray-900">({reservation.menu?.duration_minutes}分)</p>
+                  <div className="border-t-2 border-indigo-200 pt-3 sm:pt-4">
+                    <p className="text-xs sm:text-sm text-gray-900 font-bold">メニュー</p>
+                    <p className="text-base sm:text-lg font-bold text-gray-900">{reservation.menu?.name}</p>
+                    <p className="text-sm sm:text-base text-gray-900">({reservation.menu?.duration_minutes}分)</p>
                   </div>
 
-                  <div className="border-t-2 border-indigo-200 pt-4">
-                    <p className="text-sm text-gray-900 font-bold">お名前</p>
-                    <p className="text-lg font-bold text-gray-900">{reservation.customer_name}様</p>
+                  <div className="border-t-2 border-indigo-200 pt-3 sm:pt-4">
+                    <p className="text-xs sm:text-sm text-gray-900 font-bold">お名前</p>
+                    <p className="text-base sm:text-lg font-bold text-gray-900">{reservation.customer_name}様</p>
                   </div>
 
-                  <div className="border-t-2 border-indigo-200 pt-4">
-                    <p className="text-sm text-gray-900 font-bold">電話番号</p>
-                    <p className="text-lg font-bold text-gray-900">{reservation.customer_phone}</p>
+                  <div className="border-t-2 border-indigo-200 pt-3 sm:pt-4">
+                    <p className="text-xs sm:text-sm text-gray-900 font-bold">電話番号</p>
+                    <p className="text-base sm:text-lg font-bold text-gray-900">{reservation.customer_phone}</p>
                   </div>
                 </div>
               </div>
@@ -171,7 +171,7 @@ export default function MyReservationPage() {
               {reservation.status === 'confirmed' && (
                 <button
                   onClick={handleCancel}
-                  className="w-full py-4 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold text-xl"
+                  className="w-full py-3 sm:py-4 bg-red-600 text-white rounded-lg hover:bg-red-700 active:bg-red-700 font-bold text-lg sm:text-xl"
                 >
                   予約をキャンセルする
                 </button>
@@ -184,7 +184,7 @@ export default function MyReservationPage() {
                   setCustomerPhone('')
                   setNotFound(false)
                 }}
-                className="w-full py-4 bg-gray-200 text-gray-900 rounded-lg hover:bg-gray-300 font-bold text-xl"
+                className="w-full py-3 sm:py-4 bg-gray-200 text-gray-900 rounded-lg hover:bg-gray-300 active:bg-gray-300 font-bold text-lg sm:text-xl"
               >
                 戻る
               </button>
@@ -192,8 +192,8 @@ export default function MyReservationPage() {
           </div>
         )}
 
-        <div className="text-center mt-6">
-          <a href="/" className="text-gray-900 hover:text-indigo-600 text-base font-bold">
+        <div className="text-center mt-4 sm:mt-6">
+          <a href="/" className="text-gray-900 hover:text-indigo-600 text-sm sm:text-base font-bold">
             ← 予約ページに戻る
           </a>
         </div>

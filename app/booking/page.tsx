@@ -231,35 +231,35 @@ export default function BookingPage() {
   const skipEmail = true
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
       <div className="max-w-2xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-3">研修予約フォーム</h1>
-          <p className="text-lg text-gray-900">必要な情報を入力して予約を完了してください</p>
+        <div className="text-center mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2 sm:mb-3">研修予約フォーム</h1>
+          <p className="text-sm sm:text-lg text-gray-900">必要な情報を入力して予約を完了してください</p>
         </div>
 
         {/* ステップインジケーター */}
-        <div className="flex items-center justify-center mb-8">
+        <div className="flex items-center justify-center mb-6 sm:mb-8">
           {[1, 2, 3, 4, 5].map(s => (
             <div key={s} className="flex items-center">
               <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
+                className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold ${
                   step >= s ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-900'
                 }`}
               >
                 {s}
               </div>
-              {s < 5 && <div className={`w-12 h-1 ${step > s ? 'bg-indigo-600' : 'bg-gray-200'}`} />}
+              {s < 5 && <div className={`w-6 sm:w-12 h-1 ${step > s ? 'bg-indigo-600' : 'bg-gray-200'}`} />}
             </div>
           ))}
         </div>
 
-        <div className="bg-white rounded-lg shadow-lg p-8">
+        <div className="bg-white rounded-lg shadow-lg p-4 sm:p-8">
           {/* Step 1: メニュー選択 */}
           {step === 1 && (
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">メニューを選択</h2>
-              <div className="space-y-4">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">メニューを選択</h2>
+              <div className="space-y-3 sm:space-y-4">
                 {menus.map(menu => (
                   <button
                     key={menu.id}
@@ -267,10 +267,10 @@ export default function BookingPage() {
                       setSelectedMenu(menu)
                       setStep(2)
                     }}
-                    className="w-full text-left p-6 border-2 border-gray-300 rounded-lg hover:border-indigo-600 hover:bg-indigo-50 transition-all"
+                    className="w-full text-left p-4 sm:p-6 border-2 border-gray-300 rounded-lg hover:border-indigo-600 hover:bg-indigo-50 active:border-indigo-600 active:bg-indigo-50 transition-all"
                   >
-                    <div className="text-xl font-bold text-gray-900">{menu.name}</div>
-                    <div className="text-base text-gray-900 mt-1">{menu.duration_minutes}分</div>
+                    <div className="text-lg sm:text-xl font-bold text-gray-900">{menu.name}</div>
+                    <div className="text-sm sm:text-base text-gray-900 mt-1">{menu.duration_minutes}分</div>
                   </button>
                 ))}
               </div>
@@ -280,11 +280,11 @@ export default function BookingPage() {
           {/* Step 2: 研修生選択 */}
           {step === 2 && (
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-3">研修生を選択</h2>
-              <p className="text-base text-gray-900 mb-6 bg-gray-50 p-3 rounded">選択メニュー: <span className="font-bold">{selectedMenu?.name}</span></p>
-              <div className="space-y-4">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">研修生を選択</h2>
+              <p className="text-sm sm:text-base text-gray-900 mb-4 sm:mb-6 bg-gray-50 p-3 rounded">選択メニュー: <span className="font-bold">{selectedMenu?.name}</span></p>
+              <div className="space-y-3 sm:space-y-4">
                 {trainees.length === 0 ? (
-                  <p className="text-gray-900 text-center py-8 text-lg">このメニューを扱える研修生がいません</p>
+                  <p className="text-gray-900 text-center py-8 text-base sm:text-lg">このメニューを扱える研修生がいません</p>
                 ) : (
                   trainees.map(trainee => (
                     <button
@@ -293,9 +293,9 @@ export default function BookingPage() {
                         setSelectedTrainee(trainee)
                         setStep(3)
                       }}
-                      className="w-full text-left p-6 border-2 border-gray-300 rounded-lg hover:border-indigo-600 hover:bg-indigo-50 transition-all"
+                      className="w-full text-left p-4 sm:p-6 border-2 border-gray-300 rounded-lg hover:border-indigo-600 hover:bg-indigo-50 active:border-indigo-600 active:bg-indigo-50 transition-all"
                     >
-                      <div className="text-xl font-bold text-gray-900">{trainee.name}</div>
+                      <div className="text-lg sm:text-xl font-bold text-gray-900">{trainee.name}</div>
                     </button>
                   ))
                 )}
@@ -306,7 +306,7 @@ export default function BookingPage() {
                   setSelectedMenu(null)
                   setTrainees([])
                 }}
-                className="mt-6 text-gray-900 hover:text-gray-900 text-base"
+                className="mt-4 sm:mt-6 text-gray-900 hover:text-gray-900 text-sm sm:text-base"
               >
                 ← メニューを変更
               </button>
@@ -316,13 +316,13 @@ export default function BookingPage() {
           {/* Step 3: 日付選択 */}
           {step === 3 && (
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-3">日付を選択</h2>
-              <p className="text-base text-gray-900 mb-6 bg-gray-50 p-3 rounded">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">日付を選択</h2>
+              <p className="text-sm sm:text-base text-gray-900 mb-4 sm:mb-6 bg-gray-50 p-3 rounded">
                 <span className="font-bold">{selectedMenu?.name}</span> / <span className="font-bold">{selectedTrainee?.name}</span>
               </p>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 {availableDates.length === 0 ? (
-                  <p className="col-span-2 text-gray-900 text-center py-8 text-lg">予約可能な日がありません</p>
+                  <p className="col-span-full text-gray-900 text-center py-8 text-base sm:text-lg">予約可能な日がありません</p>
                 ) : (
                   availableDates.map(date => (
                     <button
@@ -331,9 +331,9 @@ export default function BookingPage() {
                         setSelectedDate(date)
                         setStep(4)
                       }}
-                      className="p-6 border-2 border-gray-300 rounded-lg hover:border-indigo-600 hover:bg-indigo-50 transition-all text-center"
+                      className="p-4 sm:p-6 border-2 border-gray-300 rounded-lg hover:border-indigo-600 hover:bg-indigo-50 active:border-indigo-600 active:bg-indigo-50 transition-all text-center"
                     >
-                      <div className="text-xl font-bold text-gray-900">
+                      <div className="text-lg sm:text-xl font-bold text-gray-900">
                         {format(new Date(date), 'M月d日(E)', { locale: ja })}
                       </div>
                     </button>
@@ -346,7 +346,7 @@ export default function BookingPage() {
                   setSelectedTrainee(null)
                   setAvailableDates([])
                 }}
-                className="mt-6 text-gray-900 hover:text-gray-900 text-base"
+                className="mt-4 sm:mt-6 text-gray-900 hover:text-gray-900 text-sm sm:text-base"
               >
                 ← 研修生を変更
               </button>
@@ -356,13 +356,13 @@ export default function BookingPage() {
           {/* Step 4: 時間選択 */}
           {step === 4 && (
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-3">時間を選択</h2>
-              <p className="text-base text-gray-900 mb-6 bg-gray-50 p-3 rounded">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">時間を選択</h2>
+              <p className="text-sm sm:text-base text-gray-900 mb-4 sm:mb-6 bg-gray-50 p-3 rounded">
                 <span className="font-bold">{format(new Date(selectedDate), 'M月d日(E)', { locale: ja })}</span> / <span className="font-bold">{selectedTrainee?.name}</span>
               </p>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
                 {availableTimes.length === 0 ? (
-                  <p className="col-span-3 text-gray-900 text-center py-8 text-lg">予約可能な時間がありません</p>
+                  <p className="col-span-full text-gray-900 text-center py-8 text-base sm:text-lg">予約可能な時間がありません</p>
                 ) : (
                   availableTimes.map(time => (
                     <button
@@ -371,7 +371,7 @@ export default function BookingPage() {
                         setSelectedTime(time)
                         setStep(5)
                       }}
-                      className="p-5 border-2 border-gray-300 rounded-lg hover:border-indigo-600 hover:bg-indigo-50 transition-all text-center text-xl font-bold text-gray-900"
+                      className="p-4 sm:p-5 border-2 border-gray-300 rounded-lg hover:border-indigo-600 hover:bg-indigo-50 active:border-indigo-600 active:bg-indigo-50 transition-all text-center text-lg sm:text-xl font-bold text-gray-900"
                     >
                       {time}
                     </button>
@@ -384,7 +384,7 @@ export default function BookingPage() {
                   setSelectedDate('')
                   setAvailableTimes([])
                 }}
-                className="mt-6 text-gray-900 hover:text-gray-900 text-base"
+                className="mt-4 sm:mt-6 text-gray-900 hover:text-gray-900 text-sm sm:text-base"
               >
                 ← 日付を変更
               </button>
@@ -394,37 +394,37 @@ export default function BookingPage() {
           {/* Step 5: お客様情報入力 */}
           {step === 5 && (
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">お客様情報入力</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">お客様情報入力</h2>
 
-              <div className="bg-indigo-50 rounded-lg p-5 mb-6">
-                <p className="text-base font-medium text-gray-900 mb-2">予約内容</p>
-                <div className="text-xl font-bold text-gray-900 mb-1">
+              <div className="bg-indigo-50 rounded-lg p-4 sm:p-5 mb-4 sm:mb-6">
+                <p className="text-sm sm:text-base font-medium text-gray-900 mb-2">予約内容</p>
+                <div className="text-lg sm:text-xl font-bold text-gray-900 mb-1">
                   {format(new Date(selectedDate), 'M月d日(E)', { locale: ja })} {selectedTime} 〜
                 </div>
-                <div className="text-base text-gray-900">
+                <div className="text-sm sm:text-base text-gray-900">
                   {selectedMenu?.name} / {selectedTrainee?.name}
                 </div>
               </div>
 
-              <div className="space-y-5">
+              <div className="space-y-4 sm:space-y-5">
                 <div>
-                  <label className="block text-base font-bold text-gray-900 mb-3">お名前 *</label>
+                  <label className="block text-sm sm:text-base font-bold text-gray-900 mb-2 sm:mb-3">お名前 *</label>
                   <input
                     type="text"
                     value={customerName}
                     onChange={e => setCustomerName(e.target.value)}
-                    className="w-full border-2 border-gray-300 rounded-lg px-4 py-4 text-lg text-gray-900 font-bold"
+                    className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 sm:py-4 text-base sm:text-lg text-gray-900 font-bold"
                     placeholder="山田 太郎"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-base font-bold text-gray-900 mb-3">電話番号 *</label>
+                  <label className="block text-sm sm:text-base font-bold text-gray-900 mb-2 sm:mb-3">電話番号 *</label>
                   <input
                     type="tel"
                     value={customerPhone}
                     onChange={e => setCustomerPhone(e.target.value)}
-                    className="w-full border-2 border-gray-300 rounded-lg px-4 py-4 text-lg text-gray-900 font-bold"
+                    className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 sm:py-4 text-base sm:text-lg text-gray-900 font-bold"
                     placeholder="090-1234-5678"
                   />
                 </div>
@@ -432,7 +432,7 @@ export default function BookingPage() {
                 <button
                   onClick={handleSubmit}
                   disabled={loading}
-                  className="w-full py-5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-bold text-xl disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  className="w-full py-4 sm:py-5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 active:bg-indigo-700 font-bold text-lg sm:text-xl disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
                   {loading ? '予約中...' : '予約を確定する'}
                 </button>
@@ -442,7 +442,7 @@ export default function BookingPage() {
                     setStep(4)
                     setSelectedTime('')
                   }}
-                  className="w-full text-gray-900 hover:text-gray-900 text-base"
+                  className="w-full text-gray-900 hover:text-gray-900 text-sm sm:text-base"
                 >
                   ← 時間を変更
                 </button>
@@ -451,9 +451,9 @@ export default function BookingPage() {
           )}
         </div>
 
-        <div className="text-center mt-6 space-y-3">
+        <div className="text-center mt-4 sm:mt-6 space-y-3">
           <div>
-            <a href="/my-reservation" className="text-indigo-600 hover:text-indigo-700 text-base font-bold">
+            <a href="/my-reservation" className="text-indigo-600 hover:text-indigo-700 text-sm sm:text-base font-bold">
               予約の確認・キャンセルはこちら →
             </a>
           </div>
