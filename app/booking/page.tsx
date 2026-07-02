@@ -161,14 +161,8 @@ export default function BookingPage() {
 
   // 予約確定
   async function handleSubmit() {
-    if (!selectedMenu || !selectedTrainee || !selectedDate || !selectedTime || !customerName || !customerPhone || !customerEmail) {
+    if (!selectedMenu || !selectedTrainee || !selectedDate || !selectedTime || !customerName || !customerPhone) {
       alert('すべての項目を入力してください')
-      return
-    }
-
-    // メールアドレスの簡易バリデーション
-    if (!customerEmail.includes('@')) {
-      alert('正しいメールアドレスを入力してください')
       return
     }
 
@@ -183,7 +177,7 @@ export default function BookingPage() {
     const endTime = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}:00`
 
     // 予約をデータベースに保存
-    const { data: newReservation, error } = await supabase.from('reservation').insert({
+    const { error } = await supabase.from('reservation').insert({
       trainee_id: selectedTrainee.id,
       menu_id: selectedMenu.id,
       date: selectedDate,
@@ -191,35 +185,18 @@ export default function BookingPage() {
       end_time: endTime,
       customer_name: customerName,
       customer_phone: customerPhone,
-      customer_email: customerEmail,
+      customer_email: customerEmail || null,
       status: 'confirmed'
-    }).select().single()
+    })
+
+    setLoading(false)
 
     if (error) {
-      setLoading(false)
       alert('予約に失敗しました: ' + error.message)
       return
     }
 
-    // メール送信
-    try {
-      await fetch('/api/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'new_reservation',
-          reservation: newReservation,
-          trainee: selectedTrainee,
-          menu: selectedMenu
-        })
-      })
-    } catch (emailError) {
-      console.error('Email send failed:', emailError)
-      // メール送信失敗しても予約は完了
-    }
-
-    setLoading(false)
-    alert('✅ 予約が完了しました！ご登録のメールアドレスに確認メールを送信しました。')
+    alert('✅ 予約が完了しました！\n\n予約内容:\n日時: ' + format(new Date(selectedDate), 'M月d日(E)', { locale: ja }) + ' ' + selectedTime + '\n研修生: ' + selectedTrainee.name + '\nメニュー: ' + selectedMenu.name)
 
     // リセット
     setStep(1)
@@ -231,6 +208,9 @@ export default function BookingPage() {
     setCustomerPhone('')
     setCustomerEmail('')
   }
+
+  // メールアドレス入力をスキップ
+  const skipEmail = true
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
@@ -429,18 +409,6 @@ export default function BookingPage() {
                     className="w-full border-2 border-gray-300 rounded-lg px-4 py-4 text-lg text-gray-900 font-bold"
                     placeholder="090-1234-5678"
                   />
-                </div>
-
-                <div>
-                  <label className="block text-base font-bold text-gray-900 mb-3">メールアドレス *</label>
-                  <input
-                    type="email"
-                    value={customerEmail}
-                    onChange={e => setCustomerEmail(e.target.value)}
-                    className="w-full border-2 border-gray-300 rounded-lg px-4 py-4 text-lg text-gray-900 font-bold"
-                    placeholder="example@gmail.com"
-                  />
-                  <p className="text-base text-gray-900 font-bold mt-2">※ 予約確認メールが届きます</p>
                 </div>
 
                 <button
