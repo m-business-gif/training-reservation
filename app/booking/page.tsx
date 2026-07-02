@@ -55,7 +55,7 @@ export default function BookingPage() {
       const traineeIds = new Set<string>()
       for (const shift of shifts ?? []) {
         for (const slot of shift.time_slots) {
-          if (slot.menu_ids.includes(selectedMenu.id)) {
+          if (selectedMenu && slot.menu_ids.includes(selectedMenu.id)) {
             traineeIds.add(shift.trainee_id)
           }
         }
@@ -85,6 +85,8 @@ export default function BookingPage() {
     if (!selectedMenu || !selectedTrainee) return
 
     async function loadDates() {
+      if (!selectedMenu || !selectedTrainee) return
+
       const today = format(new Date(), 'yyyy-MM-dd')
       const endDate = format(addDays(new Date(), 30), 'yyyy-MM-dd')
 
@@ -99,7 +101,7 @@ export default function BookingPage() {
       for (const shift of shifts ?? []) {
         // このメニューを含むtime_slotがあるか確認
         const hasMenu = shift.time_slots.some((slot: any) =>
-          slot.menu_ids.includes(selectedMenu.id) && slot.available_times.length > 0
+          selectedMenu && slot.menu_ids.includes(selectedMenu.id) && slot.available_times.length > 0
         )
         if (hasMenu) {
           dates.push(shift.date)
@@ -117,6 +119,8 @@ export default function BookingPage() {
     if (!selectedMenu || !selectedTrainee || !selectedDate) return
 
     async function loadTimes() {
+      if (!selectedMenu || !selectedTrainee) return
+
       // シフト取得
       const { data: shift } = await supabase
         .from('shift')
@@ -133,7 +137,7 @@ export default function BookingPage() {
       // このメニューが設定されているtime_slotのavailable_timesを取得
       let times: string[] = []
       for (const slot of shift.time_slots) {
-        if (slot.menu_ids.includes(selectedMenu.id)) {
+        if (selectedMenu && slot.menu_ids.includes(selectedMenu.id)) {
           times = [...times, ...slot.available_times]
         }
       }
