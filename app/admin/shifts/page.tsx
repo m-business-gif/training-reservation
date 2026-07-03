@@ -94,8 +94,11 @@ export default function ShiftsPage() {
 
   function generateAvailableTimes(slot: TimeSlot): string[] {
     if (slot.menu_ids.length === 0) return []
+    if (!slot.start_time || !slot.end_time) return []
 
     const selectedMenus = menus.filter(m => slot.menu_ids.includes(m.id))
+    if (selectedMenus.length === 0) return []
+
     const maxDuration = Math.max(...selectedMenus.map(m => m.duration_minutes))
 
     const times: string[] = []
@@ -105,12 +108,18 @@ export default function ShiftsPage() {
     const startMinutes = startH * 60 + startM
     const endMinutes = endH * 60 + endM
 
+    console.log(`時間枠生成: ${slot.start_time}~${slot.end_time}, 最大所要時間: ${maxDuration}分`)
+
+    // 開始時刻から、メニューが収まる範囲で予約可能時間を生成
     for (let m = startMinutes; m + maxDuration <= endMinutes; m += maxDuration) {
       const h = Math.floor(m / 60)
       const min = m % 60
-      times.push(`${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`)
+      const timeStr = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`
+      times.push(timeStr)
+      console.log(`  → 予約可能時間追加: ${timeStr}`)
     }
 
+    console.log(`生成された予約可能時間: ${times.join(', ')}`)
     return times
   }
 
@@ -363,9 +372,11 @@ export default function ShiftsPage() {
                             onChange={e => {
                               const updated = [...timeSlots]
                               updated[index].start_time = e.target.value
+                              // 時刻変更時に予約可能時間を自動再生成
+                              updated[index].available_times = generateAvailableTimes(updated[index])
                               setTimeSlots(updated)
                             }}
-                            className="border-2 border-gray-300 rounded px-3 py-2 font-bold"
+                            className="border-2 border-gray-300 rounded px-3 py-2 font-bold text-gray-900"
                           />
                           <span className="text-gray-900 font-bold">〜</span>
                           <input
@@ -374,9 +385,11 @@ export default function ShiftsPage() {
                             onChange={e => {
                               const updated = [...timeSlots]
                               updated[index].end_time = e.target.value
+                              // 時刻変更時に予約可能時間を自動再生成
+                              updated[index].available_times = generateAvailableTimes(updated[index])
                               setTimeSlots(updated)
                             }}
-                            className="border-2 border-gray-300 rounded px-3 py-2 font-bold"
+                            className="border-2 border-gray-300 rounded px-3 py-2 font-bold text-gray-900"
                           />
                           <button
                             onClick={() => removeTimeSlot(index)}
@@ -401,6 +414,8 @@ export default function ShiftsPage() {
                                     } else {
                                       updated[index].menu_ids = updated[index].menu_ids.filter(id => id !== menu.id)
                                     }
+                                    // メニュー変更時に予約可能時間を自動再生成
+                                    updated[index].available_times = generateAvailableTimes(updated[index])
                                     setTimeSlots(updated)
                                   }}
                                   className="w-4 h-4"
