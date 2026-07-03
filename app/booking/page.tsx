@@ -23,13 +23,40 @@ export default function BookingPage() {
 
   const [loading, setLoading] = useState(false)
 
-  // 1. メニュー一覧を取得
+  // 1. メニュー一覧を取得（シフト設定されているメニューのみ）
   useEffect(() => {
     async function loadMenus() {
+      // 今日から30日先までのシフトを取得
+      const today = format(new Date(), 'yyyy-MM-dd')
+      const endDate = format(addDays(new Date(), 30), 'yyyy-MM-dd')
+
+      const { data: shifts } = await supabase
+        .from('shift')
+        .select('time_slots')
+        .gte('date', today)
+        .lte('date', endDate)
+
+      // シフトで使われているメニューIDを抽出
+      const menuIdsInShifts = new Set<string>()
+      for (const shift of shifts ?? []) {
+        for (const slot of shift.time_slots) {
+          for (const menuId of slot.menu_ids) {
+            menuIdsInShifts.add(menuId)
+          }
+        }
+      }
+
+      if (menuIdsInShifts.size === 0) {
+        setMenus([])
+        return
+      }
+
+      // シフトで使われているメニューのみ取得
       const { data } = await supabase
         .from('menu')
         .select('*')
         .eq('is_active', true)
+        .in('id', Array.from(menuIdsInShifts))
         .order('name')
       setMenus(data ?? [])
     }
@@ -136,11 +163,15 @@ export default function BookingPage() {
 
       // このメニューが設定されているtime_slotのavailable_timesを取得
       let times: string[] = []
+      console.log('選択されたメニューID:', selectedMenu?.id)
+      console.log('シフトの時間枠:', shift.time_slots)
       for (const slot of shift.time_slots) {
+        console.log('時間枠のメニューIDs:', slot.menu_ids, 'メニュー含む?:', slot.menu_ids.includes(selectedMenu.id))
         if (selectedMenu && slot.menu_ids.includes(selectedMenu.id)) {
           times = [...times, ...slot.available_times]
         }
       }
+      console.log('予約可能時間:', times)
 
       // 既に予約済みの時間を除外
       const { data: reservations } = await supabase

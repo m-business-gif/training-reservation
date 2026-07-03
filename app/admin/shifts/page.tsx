@@ -117,6 +117,14 @@ export default function ShiftsPage() {
   async function handleSave() {
     if (!selectedTrainee || !selectedDate) return
 
+    // 予約可能時間が自動生成されていない時間枠がある場合は警告
+    for (const slot of timeSlots) {
+      if (slot.menu_ids.length > 0 && slot.available_times.length === 0) {
+        alert('⚠️ 予約可能時間が設定されていない時間枠があります。「自動生成」ボタンをクリックしてください。')
+        return
+      }
+    }
+
     const data = {
       trainee_id: selectedTrainee.id,
       date: selectedDate,
@@ -124,6 +132,8 @@ export default function ShiftsPage() {
       break_start: null,
       break_end: null
     }
+
+    console.log('保存するシフトデータ:', JSON.stringify(data, null, 2))
 
     const { error } = await supabase
       .from('shift')
