@@ -99,27 +99,13 @@ export default function ShiftsPage() {
     const selectedMenus = menus.filter(m => slot.menu_ids.includes(m.id))
     if (selectedMenus.length === 0) return []
 
-    const maxDuration = Math.max(...selectedMenus.map(m => m.duration_minutes))
+    // 予約可能時間は時間枠の開始時刻のみ
+    // （その時間枠で受け付けられる予約は1件のみ）
+    const times = [slot.start_time]
 
-    const times: string[] = []
-    const [startH, startM] = slot.start_time.split(':').map(Number)
-    const [endH, endM] = slot.end_time.split(':').map(Number)
+    console.log(`時間枠: ${slot.start_time}~${slot.end_time}`)
+    console.log(`  → 予約可能時間: ${slot.start_time}（開始時刻のみ）`)
 
-    const startMinutes = startH * 60 + startM
-    const endMinutes = endH * 60 + endM
-
-    console.log(`時間枠生成: ${slot.start_time}~${slot.end_time}, 最大所要時間: ${maxDuration}分`)
-
-    // 開始時刻から、メニューが収まる範囲で予約可能時間を生成
-    for (let m = startMinutes; m + maxDuration <= endMinutes; m += maxDuration) {
-      const h = Math.floor(m / 60)
-      const min = m % 60
-      const timeStr = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`
-      times.push(timeStr)
-      console.log(`  → 予約可能時間追加: ${timeStr}`)
-    }
-
-    console.log(`生成された予約可能時間: ${times.join(', ')}`)
     return times
   }
 
