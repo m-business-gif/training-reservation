@@ -1,0 +1,22 @@
+━━━━━━━━━━━━━━━━━━━━━━━━
+📱 研修予約アプリ 簡単インストール
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+【iPhone（Safari）】
+① https://training-reservation-v2.vercel.app を開く
+② 下の「共有」ボタン（□↑）をタップ
+③ 「ホーム画面に追加」→「追加」
+
+【Android（Chrome）】
+① https://training-reservation-v2.vercel.app を開く
+② 右上のメニュー（︙）をタップ
+③ 「ホーム画面に追加」→「インストール」
+
+【パソコン（Chrome/Edge）】
+① https://training-reservation-v2.vercel.app を開く
+② アドレスバー右の「インストール」をクリック
+③ 「インストール」をクリック
+
+✅ 次回から1タップで予約できます！
+
+━━━━━━━━━━━━━━━━━━━━━━━━
