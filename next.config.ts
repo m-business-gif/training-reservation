@@ -2,7 +2,8 @@ import type { NextConfig } from "next";
 import withPWA from 'next-pwa';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Turbopack用の空設定を追加してエラーを回避
+  turbopack: {},
 };
 
 export default withPWA({
