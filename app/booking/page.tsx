@@ -5,18 +5,22 @@ import type { Trainee, Menu, Shift } from '@/types/database'
 import { format, addDays } from 'date-fns'
 import { ja } from 'date-fns/locale'
 
+interface TimeSlotWithTrainee {
+  traineeId: string
+  traineeName: string
+  time: string
+}
+
 export default function BookingPage() {
   const [step, setStep] = useState(1)
   const [menus, setMenus] = useState<Menu[]>([])
-  const [trainees, setTrainees] = useState<Trainee[]>([])
   const [availableDates, setAvailableDates] = useState<string[]>([])
-  const [availableTimes, setAvailableTimes] = useState<string[]>([])
+  const [availableTimeSlots, setAvailableTimeSlots] = useState<TimeSlotWithTrainee[]>([])
 
   // 選択内容
   const [selectedMenu, setSelectedMenu] = useState<Menu | null>(null)
-  const [selectedTrainee, setSelectedTrainee] = useState<Trainee | null>(null)
   const [selectedDate, setSelectedDate] = useState<string>('')
-  const [selectedTime, setSelectedTime] = useState<string>('')
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlotWithTrainee | null>(null)
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
   const [customerEmail, setCustomerEmail] = useState('')
@@ -63,64 +67,17 @@ export default function BookingPage() {
     loadMenus()
   }, [])
 
-  // 2. メニュー選択後、そのメニューを扱える研修生を取得
+  // 2. メニュー選択後、予約可能な日付を取得
   useEffect(() => {
     if (!selectedMenu) return
 
-    async function loadTrainees() {
-      // 今日から30日先までのシフトを取得
-      const today = format(new Date(), 'yyyy-MM-dd')
-      const endDate = format(addDays(new Date(), 30), 'yyyy-MM-dd')
-
-      const { data: shifts } = await supabase
-        .from('shift')
-        .select('trainee_id, time_slots')
-        .gte('date', today)
-        .lte('date', endDate)
-
-      // このメニューIDを含むシフトを持つ研修生IDを抽出
-      const traineeIds = new Set<string>()
-      for (const shift of shifts ?? []) {
-        for (const slot of shift.time_slots) {
-          if (selectedMenu && slot.menu_ids.includes(selectedMenu.id)) {
-            traineeIds.add(shift.trainee_id)
-          }
-        }
-      }
-
-      if (traineeIds.size === 0) {
-        setTrainees([])
-        return
-      }
-
-      // 研修生情報を取得
-      const { data } = await supabase
-        .from('trainee')
-        .select('*')
-        .in('id', Array.from(traineeIds))
-        .eq('is_active', true)
-        .order('name')
-
-      setTrainees(data ?? [])
-    }
-
-    loadTrainees()
-  }, [selectedMenu])
-
-  // 3. 研修生選択後、予約可能な日付を取得
-  useEffect(() => {
-    if (!selectedMenu || !selectedTrainee) return
-
     async function loadDates() {
-      if (!selectedMenu || !selectedTrainee) return
-
       const today = format(new Date(), 'yyyy-MM-dd')
       const endDate = format(addDays(new Date(), 30), 'yyyy-MM-dd')
 
       const { data: shifts } = await supabase
         .from('shift')
         .select('date, time_slots')
-        .eq('trainee_id', selectedTrainee.id)
         .gte('date', today)
         .lte('date', endDate)
 
@@ -135,60 +92,78 @@ export default function BookingPage() {
         }
       }
 
-      setAvailableDates(dates.sort())
+      setAvailableDates([...new Set(dates)].sort())
     }
 
     loadDates()
-  }, [selectedMenu, selectedTrainee])
+  }, [selectedMenu])
 
-  // 4. 日付選択後、予約可能な時間を取得
+  // 3. 日付選択後、全研修生の予約可能な時間を取得（研修生名付き）
   useEffect(() => {
-    if (!selectedMenu || !selectedTrainee || !selectedDate) return
+    if (!selectedMenu || !selectedDate) return
 
-    async function loadTimes() {
-      if (!selectedMenu || !selectedTrainee) return
-
-      // シフト取得
-      const { data: shift } = await supabase
+    async function loadTimeSlots() {
+      // その日のシフトを全て取得
+      const { data: shifts } = await supabase
         .from('shift')
-        .select('time_slots')
-        .eq('trainee_id', selectedTrainee.id)
+        .select('trainee_id, time_slots')
         .eq('date', selectedDate)
-        .single()
 
-      if (!shift) {
-        setAvailableTimes([])
+      if (!shifts) {
+        setAvailableTimeSlots([])
         return
       }
 
-      // このメニューが設定されているtime_slotのavailable_timesを取得
-      let times: string[] = []
-      console.log('選択されたメニューID:', selectedMenu?.id)
-      console.log('シフトの時間枠:', shift.time_slots)
-      for (const slot of shift.time_slots) {
-        console.log('時間枠のメニューIDs:', slot.menu_ids, 'メニュー含む?:', slot.menu_ids.includes(selectedMenu.id))
-        if (selectedMenu && slot.menu_ids.includes(selectedMenu.id)) {
-          times = [...times, ...slot.available_times]
-        }
-      }
-      console.log('予約可能時間:', times)
+      // 研修生情報を取得
+      const traineeIds = shifts.map(s => s.trainee_id)
+      const { data: trainees } = await supabase
+        .from('trainee')
+        .select('*')
+        .in('id', traineeIds)
+        .eq('is_active', true)
 
-      // 既に予約済みの時間を除外
+      const traineeMap = new Map(trainees?.map(t => [t.id, t.name]))
+
+      // 既存の予約を取得
       const { data: reservations } = await supabase
         .from('reservation')
-        .select('start_time')
-        .eq('trainee_id', selectedTrainee.id)
+        .select('trainee_id, start_time')
         .eq('date', selectedDate)
         .eq('status', 'confirmed')
 
-      const bookedTimes = new Set((reservations ?? []).map(r => r.start_time.slice(0, 5)))
-      const available = times.filter(t => !bookedTimes.has(t))
+      const bookedSlots = new Set(
+        (reservations ?? []).map(r => `${r.trainee_id}_${r.start_time.slice(0, 5)}`)
+      )
 
-      setAvailableTimes(available.sort())
+      // 各研修生の予約可能時間を収集
+      const timeSlots: TimeSlotWithTrainee[] = []
+      for (const shift of shifts) {
+        const traineeName = traineeMap.get(shift.trainee_id)
+        if (!traineeName) continue
+
+        for (const slot of shift.time_slots) {
+          if (selectedMenu && slot.menu_ids.includes(selectedMenu.id)) {
+            for (const time of slot.available_times) {
+              const slotKey = `${shift.trainee_id}_${time}`
+              if (!bookedSlots.has(slotKey)) {
+                timeSlots.push({
+                  traineeId: shift.trainee_id,
+                  traineeName: traineeName,
+                  time: time
+                })
+              }
+            }
+          }
+        }
+      }
+
+      // 時間でソート
+      timeSlots.sort((a, b) => a.time.localeCompare(b.time))
+      setAvailableTimeSlots(timeSlots)
     }
 
-    loadTimes()
-  }, [selectedMenu, selectedTrainee, selectedDate])
+    loadTimeSlots()
+  }, [selectedMenu, selectedDate])
 
   // 8桁の予約番号を生成（重複チェック付き）
   async function generateReservationNumber(): Promise<string> {
@@ -206,7 +181,7 @@ export default function BookingPage() {
 
   // 予約確定
   async function handleSubmit() {
-    if (!selectedMenu || !selectedTrainee || !selectedDate || !selectedTime || !customerName || !customerPhone) {
+    if (!selectedMenu || !selectedTimeSlot || !selectedDate || !customerName || !customerPhone) {
       alert('すべての項目を入力してください')
       return
     }
@@ -214,7 +189,7 @@ export default function BookingPage() {
     setLoading(true)
 
     // 終了時刻を計算
-    const [h, m] = selectedTime.split(':').map(Number)
+    const [h, m] = selectedTimeSlot.time.split(':').map(Number)
     const startMinutes = h * 60 + m
     const endMinutes = startMinutes + selectedMenu.duration_minutes
     const endH = Math.floor(endMinutes / 60)
@@ -227,10 +202,10 @@ export default function BookingPage() {
     // 予約をデータベースに保存
     const { data: newReservation, error } = await supabase.from('reservation').insert({
       reservation_number: reservationNumber,
-      trainee_id: selectedTrainee.id,
+      trainee_id: selectedTimeSlot.traineeId,
       menu_id: selectedMenu.id,
       date: selectedDate,
-      start_time: selectedTime + ':00',
+      start_time: selectedTimeSlot.time + ':00',
       end_time: endTime,
       customer_name: customerName,
       customer_phone: customerPhone,
@@ -252,7 +227,7 @@ export default function BookingPage() {
         body: JSON.stringify({
           type: 'admin_notification',
           reservation: newReservation,
-          trainee: selectedTrainee,
+          trainee: { id: selectedTimeSlot.traineeId, name: selectedTimeSlot.traineeName },
           menu: selectedMenu
         })
       })
@@ -263,21 +238,17 @@ export default function BookingPage() {
 
     setLoading(false)
 
-    alert('✅ 予約が完了しました！\n\n【予約番号】\n' + reservationNumber + '\n\n予約内容:\n日時: ' + format(new Date(selectedDate), 'M月d日(E)', { locale: ja }) + ' ' + selectedTime + '\n研修生: ' + selectedTrainee.name + '\nメニュー: ' + selectedMenu.name + '\n\n※予約番号は予約確認・キャンセル時に必要です。')
+    alert('✅ 予約が完了しました！\n\n予約内容:\n日時: ' + format(new Date(selectedDate), 'M月d日(E)', { locale: ja }) + ' ' + selectedTimeSlot.time + '\n研修生: ' + selectedTimeSlot.traineeName + '\nメニュー: ' + selectedMenu.name + '\n\n※電話番号で予約の確認・キャンセルができます。')
 
     // リセット
     setStep(1)
     setSelectedMenu(null)
-    setSelectedTrainee(null)
     setSelectedDate('')
-    setSelectedTime('')
+    setSelectedTimeSlot(null)
     setCustomerName('')
     setCustomerPhone('')
     setCustomerEmail('')
   }
-
-  // メールアドレス入力をスキップ
-  const skipEmail = true
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
@@ -289,7 +260,7 @@ export default function BookingPage() {
 
         {/* ステップインジケーター */}
         <div className="flex items-center justify-center mb-6 sm:mb-8">
-          {[1, 2, 3, 4, 5].map(s => (
+          {[1, 2, 3, 4].map(s => (
             <div key={s} className="flex items-center">
               <div
                 className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold ${
@@ -298,7 +269,7 @@ export default function BookingPage() {
               >
                 {s}
               </div>
-              {s < 5 && <div className={`w-6 sm:w-12 h-1 ${step > s ? 'bg-indigo-600' : 'bg-gray-200'}`} />}
+              {s < 4 && <div className={`w-6 sm:w-12 h-1 ${step > s ? 'bg-indigo-600' : 'bg-gray-200'}`} />}
             </div>
           ))}
         </div>
@@ -326,48 +297,12 @@ export default function BookingPage() {
             </div>
           )}
 
-          {/* Step 2: 研修生選択 */}
+          {/* Step 2: 日付選択 */}
           {step === 2 && (
-            <div>
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">研修生を選択</h2>
-              <p className="text-sm sm:text-base text-gray-900 mb-4 sm:mb-6 bg-gray-50 p-3 rounded">選択メニュー: <span className="font-bold">{selectedMenu?.name}</span></p>
-              <div className="space-y-3 sm:space-y-4">
-                {trainees.length === 0 ? (
-                  <p className="text-gray-900 text-center py-8 text-base sm:text-lg">このメニューを扱える研修生がいません</p>
-                ) : (
-                  trainees.map(trainee => (
-                    <button
-                      key={trainee.id}
-                      onClick={() => {
-                        setSelectedTrainee(trainee)
-                        setStep(3)
-                      }}
-                      className="w-full text-left p-4 sm:p-6 border-2 border-gray-300 rounded-lg hover:border-indigo-600 hover:bg-indigo-50 active:border-indigo-600 active:bg-indigo-50 transition-all"
-                    >
-                      <div className="text-lg sm:text-xl font-bold text-gray-900">{trainee.name}</div>
-                    </button>
-                  ))
-                )}
-              </div>
-              <button
-                onClick={() => {
-                  setStep(1)
-                  setSelectedMenu(null)
-                  setTrainees([])
-                }}
-                className="mt-4 sm:mt-6 text-gray-900 hover:text-gray-900 text-sm sm:text-base"
-              >
-                ← メニューを変更
-              </button>
-            </div>
-          )}
-
-          {/* Step 3: 日付選択 */}
-          {step === 3 && (
             <div>
               <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">日付を選択</h2>
               <p className="text-sm sm:text-base text-gray-900 mb-4 sm:mb-6 bg-gray-50 p-3 rounded">
-                <span className="font-bold">{selectedMenu?.name}</span> / <span className="font-bold">{selectedTrainee?.name}</span>
+                選択メニュー: <span className="font-bold">{selectedMenu?.name}</span>
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 {availableDates.length === 0 ? (
@@ -378,7 +313,7 @@ export default function BookingPage() {
                       key={date}
                       onClick={() => {
                         setSelectedDate(date)
-                        setStep(4)
+                        setStep(3)
                       }}
                       className="p-4 sm:p-6 border-2 border-gray-300 rounded-lg hover:border-indigo-600 hover:bg-indigo-50 active:border-indigo-600 active:bg-indigo-50 transition-all text-center"
                     >
@@ -391,47 +326,48 @@ export default function BookingPage() {
               </div>
               <button
                 onClick={() => {
-                  setStep(2)
-                  setSelectedTrainee(null)
+                  setStep(1)
+                  setSelectedMenu(null)
                   setAvailableDates([])
                 }}
                 className="mt-4 sm:mt-6 text-gray-900 hover:text-gray-900 text-sm sm:text-base"
               >
-                ← 研修生を変更
+                ← メニューを変更
               </button>
             </div>
           )}
 
-          {/* Step 4: 時間選択 */}
-          {step === 4 && (
+          {/* Step 3: 時間選択 */}
+          {step === 3 && (
             <div>
               <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">時間を選択</h2>
               <p className="text-sm sm:text-base text-gray-900 mb-4 sm:mb-6 bg-gray-50 p-3 rounded">
-                <span className="font-bold">{format(new Date(selectedDate), 'M月d日(E)', { locale: ja })}</span> / <span className="font-bold">{selectedTrainee?.name}</span>
+                <span className="font-bold">{format(new Date(selectedDate), 'M月d日(E)', { locale: ja })}</span> / <span className="font-bold">{selectedMenu?.name}</span>
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-                {availableTimes.length === 0 ? (
+                {availableTimeSlots.length === 0 ? (
                   <p className="col-span-full text-gray-900 text-center py-8 text-base sm:text-lg">予約可能な時間がありません</p>
                 ) : (
-                  availableTimes.map(time => (
+                  availableTimeSlots.map((slot, idx) => (
                     <button
-                      key={time}
+                      key={`${slot.traineeId}_${slot.time}_${idx}`}
                       onClick={() => {
-                        setSelectedTime(time)
-                        setStep(5)
+                        setSelectedTimeSlot(slot)
+                        setStep(4)
                       }}
-                      className="p-4 sm:p-5 border-2 border-gray-300 rounded-lg hover:border-indigo-600 hover:bg-indigo-50 active:border-indigo-600 active:bg-indigo-50 transition-all text-center text-lg sm:text-xl font-bold text-gray-900"
+                      className="p-4 sm:p-5 border-2 border-gray-300 rounded-lg hover:border-indigo-600 hover:bg-indigo-50 active:border-indigo-600 active:bg-indigo-50 transition-all text-center"
                     >
-                      {time}
+                      <div className="text-lg sm:text-xl font-bold text-gray-900">{slot.time}</div>
+                      <div className="text-xs sm:text-sm text-gray-600 mt-1">{slot.traineeName}</div>
                     </button>
                   ))
                 )}
               </div>
               <button
                 onClick={() => {
-                  setStep(3)
+                  setStep(2)
                   setSelectedDate('')
-                  setAvailableTimes([])
+                  setAvailableTimeSlots([])
                 }}
                 className="mt-4 sm:mt-6 text-gray-900 hover:text-gray-900 text-sm sm:text-base"
               >
@@ -440,18 +376,18 @@ export default function BookingPage() {
             </div>
           )}
 
-          {/* Step 5: お客様情報入力 */}
-          {step === 5 && (
+          {/* Step 4: お客様情報入力 */}
+          {step === 4 && (
             <div>
               <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">お客様情報入力</h2>
 
               <div className="bg-indigo-50 rounded-lg p-4 sm:p-5 mb-4 sm:mb-6">
                 <p className="text-sm sm:text-base font-medium text-gray-900 mb-2">予約内容</p>
                 <div className="text-lg sm:text-xl font-bold text-gray-900 mb-1">
-                  {format(new Date(selectedDate), 'M月d日(E)', { locale: ja })} {selectedTime} 〜
+                  {format(new Date(selectedDate), 'M月d日(E)', { locale: ja })} {selectedTimeSlot?.time} 〜
                 </div>
                 <div className="text-sm sm:text-base text-gray-900">
-                  {selectedMenu?.name} / {selectedTrainee?.name}
+                  {selectedMenu?.name} / {selectedTimeSlot?.traineeName}
                 </div>
               </div>
 
@@ -488,8 +424,8 @@ export default function BookingPage() {
 
                 <button
                   onClick={() => {
-                    setStep(4)
-                    setSelectedTime('')
+                    setStep(3)
+                    setSelectedTimeSlot(null)
                   }}
                   className="w-full text-gray-900 hover:text-gray-900 text-sm sm:text-base"
                 >
