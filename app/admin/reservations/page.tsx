@@ -28,7 +28,6 @@ export default function ReservationsPage() {
   const [addStartTime, setAddStartTime] = useState('')
   const [addCustomerName, setAddCustomerName] = useState('')
   const [addCustomerPhone, setAddCustomerPhone] = useState('')
-  const [addCustomerEmail, setAddCustomerEmail] = useState('')
 
   // 予約詳細モーダル
   const [showDetailModal, setShowDetailModal] = useState(false)
@@ -130,7 +129,6 @@ export default function ReservationsPage() {
     setAddMenuId('')
     setAddCustomerName('')
     setAddCustomerPhone('')
-    setAddCustomerEmail('')
     setShowAddModal(true)
   }
 
@@ -178,7 +176,7 @@ export default function ReservationsPage() {
       end_time: endTime,
       customer_name: addCustomerName,
       customer_phone: addCustomerPhone,
-      customer_email: addCustomerEmail || null,
+      customer_email: null,
       status: 'confirmed'
     }).select().single()
 
@@ -636,17 +634,6 @@ export default function ReservationsPage() {
                       value={addCustomerPhone}
                       onChange={e => setAddCustomerPhone(e.target.value)}
                       placeholder="090-1234-5678"
-                      className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-base text-gray-900 font-bold"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-base font-bold text-gray-900 mb-2">メールアドレス</label>
-                    <input
-                      type="email"
-                      value={addCustomerEmail}
-                      onChange={e => setAddCustomerEmail(e.target.value)}
-                      placeholder="example@gmail.com"
                       className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-base text-gray-900 font-bold"
                     />
                   </div>
