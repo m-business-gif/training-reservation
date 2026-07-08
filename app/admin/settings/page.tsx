@@ -131,19 +131,20 @@ export default function SettingsPage() {
         {/* メール通知設定 */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4">メール通知設定</h2>
-          <p className="text-base text-gray-900 mb-4">予約が入ったときに通知を受け取るメールアドレス</p>
+          <p className="text-base text-gray-900 mb-2">予約が入ったときに通知を受け取るメールアドレス</p>
+          <p className="text-sm text-gray-600 mb-4">※ 複数のアドレスに送る場合は、1行に1つずつ入力してください</p>
 
-          <div className="flex gap-2">
-            <input
-              type="email"
+          <div className="space-y-2">
+            <textarea
               value={notificationEmail}
               onChange={e => setNotificationEmail(e.target.value)}
-              placeholder="example@gmail.com"
-              className="flex-1 border-2 border-gray-300 rounded-lg px-3 py-3 text-base text-gray-900 font-bold"
+              placeholder="m.yamada@lime-fit.com&#10;y.hanayama@lime-fit.com"
+              rows={4}
+              className="w-full border-2 border-gray-300 rounded-lg px-3 py-3 text-base text-gray-900 font-bold"
             />
             <button
               onClick={saveEmail}
-              className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-bold text-base"
+              className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-bold text-base"
             >
               保存
             </button>

@@ -111,9 +111,19 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Admin email not configured' }, { status: 400 })
       }
 
+      // 改行で分割して複数のメールアドレスに対応
+      const emailAddresses = settings.notification_email
+        .split('\n')
+        .map(email => email.trim())
+        .filter(email => email.length > 0)
+
+      if (emailAddresses.length === 0) {
+        return NextResponse.json({ error: 'No valid email addresses configured' }, { status: 400 })
+      }
+
       const { data, error } = await resend.emails.send({
         from: 'onboarding@resend.dev',
-        to: settings.notification_email,
+        to: emailAddresses,
         subject: `【新規予約】${reservation.customer_name}様 - ${reservation.date} ${reservation.start_time.slice(0, 5)}`,
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb;">
