@@ -169,7 +169,7 @@ export default function ReservationsPage() {
     // 予約番号を生成
     const reservationNumber = await generateReservationNumber()
 
-    const { error } = await supabase.from('reservation').insert({
+    const { data: newReservation, error } = await supabase.from('reservation').insert({
       reservation_number: reservationNumber,
       trainee_id: addTraineeId,
       menu_id: addMenuId,
@@ -180,16 +180,34 @@ export default function ReservationsPage() {
       customer_phone: addCustomerPhone,
       customer_email: addCustomerEmail || null,
       status: 'confirmed'
-    })
+    }).select().single()
 
     if (error) {
       alert('予約追加に失敗しました: ' + error.message)
-    } else {
-      alert('✅ 予約を追加しました\n予約番号: ' + reservationNumber)
-      setShowAddModal(false)
-      loadReservations()
-      loadWeeklyStats()
+      return
     }
+
+    // 管理者にメール通知を送信
+    const trainee = trainees.find(t => t.id === addTraineeId)
+    try {
+      await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'admin_notification',
+          reservation: newReservation,
+          trainee: trainee,
+          menu: menu
+        })
+      })
+    } catch (emailError) {
+      console.error('Email notification failed:', emailError)
+    }
+
+    alert('✅ 予約を追加しました\n予約番号: ' + reservationNumber)
+    setShowAddModal(false)
+    loadReservations()
+    loadWeeklyStats()
   }
 
   // 時間を分に変換

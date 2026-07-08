@@ -225,7 +225,7 @@ export default function BookingPage() {
     const reservationNumber = await generateReservationNumber()
 
     // 予約をデータベースに保存
-    const { error } = await supabase.from('reservation').insert({
+    const { data: newReservation, error } = await supabase.from('reservation').insert({
       reservation_number: reservationNumber,
       trainee_id: selectedTrainee.id,
       menu_id: selectedMenu.id,
@@ -236,14 +236,32 @@ export default function BookingPage() {
       customer_phone: customerPhone,
       customer_email: customerEmail || null,
       status: 'confirmed'
-    })
-
-    setLoading(false)
+    }).select().single()
 
     if (error) {
+      setLoading(false)
       alert('予約に失敗しました: ' + error.message)
       return
     }
+
+    // 管理者にメール通知を送信
+    try {
+      await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'admin_notification',
+          reservation: newReservation,
+          trainee: selectedTrainee,
+          menu: selectedMenu
+        })
+      })
+    } catch (emailError) {
+      console.error('Email notification failed:', emailError)
+      // メール送信失敗してもアラートは出さない（予約は成功しているため）
+    }
+
+    setLoading(false)
 
     alert('✅ 予約が完了しました！\n\n【予約番号】\n' + reservationNumber + '\n\n予約内容:\n日時: ' + format(new Date(selectedDate), 'M月d日(E)', { locale: ja }) + ' ' + selectedTime + '\n研修生: ' + selectedTrainee.name + '\nメニュー: ' + selectedMenu.name + '\n\n※予約番号は予約確認・キャンセル時に必要です。')
 

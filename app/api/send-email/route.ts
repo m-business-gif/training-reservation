@@ -99,6 +99,82 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, data })
     }
 
+    // 管理者への予約通知メール
+    if (type === 'admin_notification') {
+      // settingsから管理者メールアドレスを取得
+      const { data: settings } = await supabase
+        .from('settings')
+        .select('notification_email')
+        .single()
+
+      if (!settings?.notification_email) {
+        return NextResponse.json({ error: 'Admin email not configured' }, { status: 400 })
+      }
+
+      const { data, error } = await resend.emails.send({
+        from: 'onboarding@resend.dev',
+        to: settings.notification_email,
+        subject: `【新規予約】${reservation.customer_name}様 - ${reservation.date} ${reservation.start_time.slice(0, 5)}`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb;">
+            <div style="background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+              <h1 style="color: #4f46e5; margin-top: 0;">🔔 新規予約が入りました</h1>
+
+              <div style="background-color: #eef2ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h2 style="margin-top: 0; color: #312e81; font-size: 18px;">予約内容</h2>
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 12px 0; color: #6b7280; font-weight: bold; width: 120px;">予約番号</td>
+                    <td style="padding: 12px 0; color: #4f46e5; font-weight: bold; font-size: 20px;">${reservation.reservation_number}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 12px 0; color: #6b7280; font-weight: bold;">日時</td>
+                    <td style="padding: 12px 0; color: #111827; font-weight: bold; font-size: 18px;">${reservation.date} ${reservation.start_time.slice(0, 5)} 〜 ${reservation.end_time.slice(0, 5)}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 12px 0; color: #6b7280; font-weight: bold;">担当研修生</td>
+                    <td style="padding: 12px 0; color: #111827; font-size: 16px;">${trainee.name}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 12px 0; color: #6b7280; font-weight: bold;">メニュー</td>
+                    <td style="padding: 12px 0; color: #111827; font-size: 16px;">${menu.name} (${menu.duration_minutes}分)</td>
+                  </tr>
+                </table>
+              </div>
+
+              <div style="background-color: #fff7ed; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h2 style="margin-top: 0; color: #92400e; font-size: 18px;">お客様情報</h2>
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 12px 0; color: #6b7280; font-weight: bold; width: 120px;">お名前</td>
+                    <td style="padding: 12px 0; color: #111827; font-size: 16px;">${reservation.customer_name}様</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 12px 0; color: #6b7280; font-weight: bold;">電話番号</td>
+                    <td style="padding: 12px 0; color: #111827; font-size: 16px;">${reservation.customer_phone}</td>
+                  </tr>
+                </table>
+              </div>
+
+              <div style="text-align: center; margin-top: 30px;">
+                <a href="https://training-reservation-v2.vercel.app/admin/reservations"
+                   style="display: inline-block; background-color: #4f46e5; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">
+                  予約管理画面を開く
+                </a>
+              </div>
+            </div>
+          </div>
+        `,
+      })
+
+      if (error) {
+        console.error('Admin email send error:', error)
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+
+      return NextResponse.json({ success: true, data })
+    }
+
     return NextResponse.json({ error: 'Invalid type' }, { status: 400 })
   } catch (error: any) {
     console.error('API error:', error)
