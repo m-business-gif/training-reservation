@@ -114,8 +114,8 @@ export async function POST(request: NextRequest) {
       // 改行で分割して複数のメールアドレスに対応
       const emailAddresses = settings.notification_email
         .split('\n')
-        .map(email => email.trim())
-        .filter(email => email.length > 0)
+        .map((email: string) => email.trim())
+        .filter((email: string) => email.length > 0)
 
       if (emailAddresses.length === 0) {
         return NextResponse.json({ error: 'No valid email addresses configured' }, { status: 400 })
