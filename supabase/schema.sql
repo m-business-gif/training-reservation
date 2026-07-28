@@ -58,7 +58,27 @@ CREATE TABLE IF NOT EXISTS reservation (
   cancelled_at TIMESTAMPTZ
 );
 
--- 5. システム設定テーブル
+-- 5. キャンセル履歴テーブル
+CREATE TABLE IF NOT EXISTS cancellation_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  reservation_id UUID REFERENCES reservation(id) ON DELETE SET NULL,
+  reservation_number TEXT,
+  trainee_id UUID REFERENCES trainee(id) ON DELETE SET NULL,
+  trainee_name TEXT NOT NULL,
+  menu_name TEXT NOT NULL,
+  date DATE NOT NULL,
+  start_time TIME NOT NULL,
+  end_time TIME NOT NULL,
+  customer_name TEXT NOT NULL,
+  customer_phone TEXT NOT NULL,
+  customer_email TEXT,
+  cancelled_by TEXT NOT NULL CHECK (cancelled_by IN ('salon', 'customer')),
+  cancelled_at TIMESTAMPTZ DEFAULT NOW(),
+  cancellation_reason TEXT,
+  original_created_at TIMESTAMPTZ
+);
+
+-- 6. システム設定テーブル
 CREATE TABLE IF NOT EXISTS settings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   notification_email TEXT,
@@ -70,18 +90,22 @@ CREATE TABLE IF NOT EXISTS settings (
 CREATE INDEX IF NOT EXISTS idx_shift_trainee_date ON shift(trainee_id, date);
 CREATE INDEX IF NOT EXISTS idx_reservation_trainee_date ON reservation(trainee_id, date);
 CREATE INDEX IF NOT EXISTS idx_reservation_status ON reservation(status);
+CREATE INDEX IF NOT EXISTS idx_cancellation_history_date ON cancellation_history(date);
+CREATE INDEX IF NOT EXISTS idx_cancellation_history_cancelled_by ON cancellation_history(cancelled_by);
 
 -- RLS有効化
 ALTER TABLE trainee ENABLE ROW LEVEL SECURITY;
 ALTER TABLE menu ENABLE ROW LEVEL SECURITY;
 ALTER TABLE shift ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reservation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cancellation_history ENABLE ROW LEVEL SECURITY;
 
 -- 全データ公開（認証なし）
 CREATE POLICY "Allow all trainee" ON trainee FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all menu" ON menu FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all shift" ON shift FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all reservation" ON reservation FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all cancellation_history" ON cancellation_history FOR ALL USING (true) WITH CHECK (true);
 
 ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow all settings" ON settings FOR ALL USING (true) WITH CHECK (true);

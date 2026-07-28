@@ -219,21 +219,20 @@ export default function BookingPage() {
       return
     }
 
-    // 管理者にメール通知を送信
+    // Slack通知を送信
     try {
-      await fetch('/api/send-email', {
+      await fetch('/api/send-slack', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          type: 'admin_notification',
           reservation: newReservation,
           trainee: { id: selectedTimeSlot.traineeId, name: selectedTimeSlot.traineeName },
           menu: selectedMenu
         })
       })
-    } catch (emailError) {
-      console.error('Email notification failed:', emailError)
-      // メール送信失敗してもアラートは出さない（予約は成功しているため）
+    } catch (slackError) {
+      console.error('Slack notification failed:', slackError)
+      // Slack送信失敗してもアラートは出さない（予約は成功しているため）
     }
 
     setLoading(false)

@@ -50,3 +50,22 @@ export interface Reservation {
   created_at: string
   cancelled_at: string | null
 }
+
+export interface CancellationHistory {
+  id: string
+  reservation_id: string | null
+  reservation_number: string | null
+  trainee_id: string | null
+  trainee_name: string
+  menu_name: string
+  date: string
+  start_time: string
+  end_time: string
+  customer_name: string
+  customer_phone: string
+  customer_email: string | null
+  cancelled_by: 'salon' | 'customer'
+  cancelled_at: string
+  cancellation_reason: string | null
+  original_created_at: string | null
+}

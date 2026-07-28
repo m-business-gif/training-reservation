@@ -17,7 +17,7 @@ export default function ShiftsPage() {
   const [selectedTrainee, setSelectedTrainee] = useState<Trainee | null>(null)
   const [selectedDate, setSelectedDate] = useState<string>('')
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([
-    { start_time: '10:00', end_time: '19:00', menu_ids: [], available_times: [] }
+    { start_time: '09:00', end_time: '19:00', menu_ids: [], available_times: [] }
   ])
 
   const monthStart = startOfMonth(currentMonth)
@@ -78,14 +78,14 @@ export default function ShiftsPage() {
     if (existingShift && existingShift.time_slots.length > 0) {
       setTimeSlots(existingShift.time_slots)
     } else {
-      setTimeSlots([{ start_time: '10:00', end_time: '19:00', menu_ids: [], available_times: [] }])
+      setTimeSlots([{ start_time: '09:00', end_time: '19:00', menu_ids: [], available_times: [] }])
     }
 
     setShowModal(true)
   }
 
   function addTimeSlot() {
-    setTimeSlots([...timeSlots, { start_time: '14:00', end_time: '19:00', menu_ids: [], available_times: [] }])
+    setTimeSlots([...timeSlots, { start_time: '09:00', end_time: '19:00', menu_ids: [], available_times: [] }])
   }
 
   function removeTimeSlot(index: number) {
@@ -93,53 +93,108 @@ export default function ShiftsPage() {
   }
 
   function generateAvailableTimes(slot: TimeSlot): string[] {
-    if (slot.menu_ids.length === 0) return []
-    if (!slot.start_time || !slot.end_time) return []
+    try {
+      if (slot.menu_ids.length === 0) {
+        console.log('メニューが選択されていません')
+        return []
+      }
+      if (!slot.start_time || !slot.end_time) {
+        console.log('開始/終了時刻が設定されていません')
+        return []
+      }
 
-    const selectedMenus = menus.filter(m => slot.menu_ids.includes(m.id))
-    if (selectedMenus.length === 0) return []
+      const selectedMenus = menus.filter(m => slot.menu_ids.includes(m.id))
+      if (selectedMenus.length === 0) {
+        console.log('選択されたメニューが見つかりません:', slot.menu_ids)
+        return []
+      }
 
-    // 予約可能時間は時間枠の開始時刻のみ
-    // （その時間枠で受け付けられる予約は1件のみ）
-    const times = [slot.start_time]
+      // 最短のメニュー所要時間を取得
+      const minDuration = Math.min(...selectedMenus.map(m => m.duration_minutes))
 
-    console.log(`時間枠: ${slot.start_time}~${slot.end_time}`)
-    console.log(`  → 予約可能時間: ${slot.start_time}（開始時刻のみ）`)
+      if (!minDuration || minDuration <= 0) {
+        console.error('無効なメニュー所要時間:', minDuration)
+        return []
+      }
 
-    return times
+      // 開始時刻と終了時刻を分に変換
+      const [startH, startM] = slot.start_time.split(':').map(Number)
+      const [endH, endM] = slot.end_time.split(':').map(Number)
+
+      if (isNaN(startH) || isNaN(startM) || isNaN(endH) || isNaN(endM)) {
+        console.error('時刻のパースに失敗:', { start_time: slot.start_time, end_time: slot.end_time })
+        return []
+      }
+
+      const startMinutes = startH * 60 + startM
+      const endMinutes = endH * 60 + endM
+
+      if (startMinutes >= endMinutes) {
+        console.error('開始時刻が終了時刻以降です:', { startMinutes, endMinutes })
+        return []
+      }
+
+      // 最短メニュー所要時間間隔で予約可能時間を生成
+      const times: string[] = []
+      for (let m = startMinutes; m + minDuration <= endMinutes; m += minDuration) {
+        const h = Math.floor(m / 60)
+        const min = m % 60
+        times.push(`${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`)
+      }
+
+      console.log(`✅ 時間枠: ${slot.start_time}~${slot.end_time}, 最短メニュー: ${minDuration}分`)
+      console.log(`   → 予約可能時間 (${times.length}件): ${times.join(', ')}`)
+
+      return times
+    } catch (err) {
+      console.error('generateAvailableTimes エラー:', err)
+      return []
+    }
   }
 
   async function handleSave() {
     if (!selectedTrainee || !selectedDate) return
 
-    // 予約可能時間が自動生成されていない時間枠がある場合は警告
-    for (const slot of timeSlots) {
-      if (slot.menu_ids.length > 0 && slot.available_times.length === 0) {
-        alert('⚠️ 予約可能時間が設定されていない時間枠があります。「自動生成」ボタンをクリックしてください。')
-        return
+    try {
+      // 保存前にavailable_timesを自動生成
+      const updatedTimeSlots = timeSlots.map(slot => {
+        if (slot.menu_ids.length > 0) {
+          // 常にavailable_timesを再生成
+          const availableTimes = generateAvailableTimes(slot)
+          console.log(`Slot ${slot.start_time}-${slot.end_time}: generated ${availableTimes.length} times`)
+          return {
+            ...slot,
+            available_times: availableTimes
+          }
+        }
+        return slot
+      })
+
+      const data = {
+        trainee_id: selectedTrainee.id,
+        date: selectedDate,
+        time_slots: updatedTimeSlots,
+        break_start: null,
+        break_end: null
       }
-    }
 
-    const data = {
-      trainee_id: selectedTrainee.id,
-      date: selectedDate,
-      time_slots: timeSlots,
-      break_start: null,
-      break_end: null
-    }
+      console.log('保存するシフトデータ:', JSON.stringify(data, null, 2))
 
-    console.log('保存するシフトデータ:', JSON.stringify(data, null, 2))
+      const { error } = await supabase
+        .from('shift')
+        .upsert(data, { onConflict: 'trainee_id,date' })
 
-    const { error } = await supabase
-      .from('shift')
-      .upsert(data, { onConflict: 'trainee_id,date' })
-
-    if (error) {
-      alert('保存に失敗しました: ' + error.message)
-    } else {
-      alert('✅ シフトを保存しました')
-      setShowModal(false)
-      loadMonthShifts()
+      if (error) {
+        console.error('保存エラー:', error)
+        alert('保存に失敗しました: ' + error.message)
+      } else {
+        alert('✅ シフトを保存しました')
+        setShowModal(false)
+        loadMonthShifts()
+      }
+    } catch (err) {
+      console.error('予期しないエラー:', err)
+      alert('エラーが発生しました: ' + (err instanceof Error ? err.message : String(err)))
     }
   }
 

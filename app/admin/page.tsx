@@ -32,6 +32,18 @@ export default function AdminHome() {
           </Link>
 
           <Link
+            href="/admin/cancellation-history"
+            className="block bg-white rounded-lg shadow p-6 sm:p-8 hover:shadow-lg active:shadow-lg transition-all hover:border-indigo-500 active:border-indigo-500 border-2 border-transparent"
+          >
+            <div className="text-4xl sm:text-5xl mb-3 sm:mb-4">📝</div>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">キャンセル履歴</h2>
+            <p className="text-sm sm:text-base text-gray-900">
+              サロン都合・モデル都合を管理<br />
+              キャンセル理由の確認
+            </p>
+          </Link>
+
+          <Link
             href="/admin/settings"
             className="block bg-white rounded-lg shadow p-6 sm:p-8 hover:shadow-lg active:shadow-lg transition-all hover:border-indigo-500 active:border-indigo-500 border-2 border-transparent"
           >

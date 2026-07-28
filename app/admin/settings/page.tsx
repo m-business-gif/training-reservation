@@ -15,13 +15,8 @@ export default function SettingsPage() {
   const [newMenuName, setNewMenuName] = useState('')
   const [newMenuDuration, setNewMenuDuration] = useState(60)
 
-  // メール通知設定
-  const [notificationEmail, setNotificationEmail] = useState('')
-  const [settingsId, setSettingsId] = useState<string | null>(null)
-
   useEffect(() => {
     loadData()
-    loadSettings()
   }, [])
 
   async function loadData() {
@@ -31,45 +26,6 @@ export default function SettingsPage() {
     ])
     setTrainees(t.data ?? [])
     setMenus(m.data ?? [])
-  }
-
-  async function loadSettings() {
-    const { data } = await supabase.from('settings').select('*').single()
-    if (data) {
-      setNotificationEmail(data.notification_email || '')
-      setSettingsId(data.id)
-    }
-  }
-
-  async function saveEmail() {
-    if (!notificationEmail.trim()) {
-      alert('メールアドレスを入力してください')
-      return
-    }
-
-    if (settingsId) {
-      // 更新
-      const { error } = await supabase
-        .from('settings')
-        .update({ notification_email: notificationEmail, updated_at: new Date().toISOString() })
-        .eq('id', settingsId)
-
-      if (!error) {
-        alert('✅ メールアドレスを保存しました')
-      }
-    } else {
-      // 新規作成
-      const { data, error } = await supabase
-        .from('settings')
-        .insert({ notification_email: notificationEmail })
-        .select()
-        .single()
-
-      if (!error && data) {
-        setSettingsId(data.id)
-        alert('✅ メールアドレスを保存しました')
-      }
-    }
   }
 
   async function addTrainee() {
@@ -126,29 +82,6 @@ export default function SettingsPage() {
           <Link href="/admin" className="text-base font-bold text-gray-900 hover:text-indigo-600">
             ← 管理画面トップ
           </Link>
-        </div>
-
-        {/* メール通知設定 */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">メール通知設定</h2>
-          <p className="text-base text-gray-900 mb-2">予約が入ったときに通知を受け取るメールアドレス</p>
-          <p className="text-sm text-gray-600 mb-4">※ 複数のアドレスに送る場合は、1行に1つずつ入力してください</p>
-
-          <div className="space-y-2">
-            <textarea
-              value={notificationEmail}
-              onChange={e => setNotificationEmail(e.target.value)}
-              placeholder="m.yamada@lime-fit.com&#10;y.hanayama@lime-fit.com"
-              rows={4}
-              className="w-full border-2 border-gray-300 rounded-lg px-3 py-3 text-base text-gray-900 font-bold"
-            />
-            <button
-              onClick={saveEmail}
-              className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-bold text-base"
-            >
-              保存
-            </button>
-          </div>
         </div>
 
         {/* 研修生管理 */}

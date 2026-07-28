@@ -23,15 +23,22 @@ export default function ReservationsPage() {
 
   // 手動予約追加モーダル
   const [showAddModal, setShowAddModal] = useState(false)
+  const [addDate, setAddDate] = useState('')
   const [addTraineeId, setAddTraineeId] = useState('')
   const [addMenuId, setAddMenuId] = useState('')
   const [addStartTime, setAddStartTime] = useState('')
   const [addCustomerName, setAddCustomerName] = useState('')
   const [addCustomerPhone, setAddCustomerPhone] = useState('')
+  const [availableTimes, setAvailableTimes] = useState<string[]>([])
 
   // 予約詳細モーダル
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [selectedReservation, setSelectedReservation] = useState<ReservationWithDetails | null>(null)
+
+  // キャンセル確認モーダル
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [cancelledBy, setCancelledBy] = useState<'salon' | 'customer'>('salon')
+  const [cancellationReason, setCancellationReason] = useState('')
 
   useEffect(() => {
     loadTrainees()
@@ -100,20 +107,57 @@ export default function ReservationsPage() {
     setReservations(data ?? [])
   }
 
-  async function handleCancel(id: string) {
-    if (!confirm('この予約をキャンセルしますか？')) return
+  function openCancelModal(reservation: ReservationWithDetails) {
+    setSelectedReservation(reservation)
+    setCancelledBy('salon')
+    setCancellationReason('')
+    setShowCancelModal(true)
+  }
 
-    const { error } = await supabase
+  async function handleCancel() {
+    if (!selectedReservation) return
+
+    // 予約をキャンセル状態に更新
+    const { error: updateError } = await supabase
       .from('reservation')
       .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
-      .eq('id', id)
+      .eq('id', selectedReservation.id)
 
-    if (!error) {
-      alert('✅ キャンセルしました')
-      setShowDetailModal(false)
-      loadReservations()
-      loadWeeklyStats()
+    if (updateError) {
+      alert('キャンセルに失敗しました: ' + updateError.message)
+      return
     }
+
+    // キャンセル履歴を保存
+    const { error: historyError } = await supabase
+      .from('cancellation_history')
+      .insert({
+        reservation_id: selectedReservation.id,
+        reservation_number: selectedReservation.reservation_number,
+        trainee_id: selectedReservation.trainee_id,
+        trainee_name: selectedReservation.trainee?.name || '不明',
+        menu_name: selectedReservation.menu?.name || '不明',
+        date: selectedReservation.date,
+        start_time: selectedReservation.start_time,
+        end_time: selectedReservation.end_time,
+        customer_name: selectedReservation.customer_name,
+        customer_phone: selectedReservation.customer_phone,
+        customer_email: selectedReservation.customer_email,
+        cancelled_by: cancelledBy,
+        cancelled_at: new Date().toISOString(),
+        cancellation_reason: cancellationReason || null,
+        original_created_at: selectedReservation.created_at
+      })
+
+    if (historyError) {
+      console.error('履歴保存エラー:', historyError)
+    }
+
+    alert('✅ キャンセルしました')
+    setShowCancelModal(false)
+    setShowDetailModal(false)
+    loadReservations()
+    loadWeeklyStats()
   }
 
   // 予約詳細を表示
@@ -122,14 +166,61 @@ export default function ReservationsPage() {
     setShowDetailModal(true)
   }
 
+  // シフトから利用可能な時間を取得
+  async function loadAvailableTimes(date: string, traineeId: string) {
+    if (!date || !traineeId) {
+      setAvailableTimes([])
+      return
+    }
+
+    const { data: shift, error } = await supabase
+      .from('shift')
+      .select('time_slots')
+      .eq('trainee_id', traineeId)
+      .eq('date', date)
+      .maybeSingle()
+
+    console.log('=== シフト取得結果 ===')
+    console.log('日付:', date)
+    console.log('研修生ID:', traineeId)
+    console.log('シフトデータ:', shift)
+    console.log('エラー:', error)
+
+    if (!shift) {
+      console.log('❌ シフトが見つかりません')
+      setAvailableTimes([])
+      return
+    }
+
+    console.log('time_slots:', shift.time_slots)
+
+    // time_slotsからavailable_timesを抽出
+    const times: string[] = []
+    if (shift.time_slots && shift.time_slots.length > 0) {
+      for (let i = 0; i < shift.time_slots.length; i++) {
+        const slot = shift.time_slots[i]
+        console.log(`  time_slot[${i}]:`, slot)
+        console.log(`    available_times:`, slot.available_times)
+        if (slot.available_times && slot.available_times.length > 0) {
+          times.push(...slot.available_times)
+        }
+      }
+    }
+
+    console.log('✅ 抽出された予約可能時間:', times)
+    setAvailableTimes(times.sort())
+  }
+
   // 手動予約追加
-  function openAddModal(traineeId: string, time: string) {
+  async function openAddModal(traineeId: string, time: string) {
+    setAddDate(selectedDate)
     setAddTraineeId(traineeId)
     setAddStartTime(time)
     setAddMenuId('')
     setAddCustomerName('')
     setAddCustomerPhone('')
     setShowAddModal(true)
+    await loadAvailableTimes(selectedDate, traineeId)
   }
 
   // 8桁の予約番号を生成（重複チェック付き）
@@ -147,7 +238,7 @@ export default function ReservationsPage() {
   }
 
   async function handleAddReservation() {
-    if (!addTraineeId || !addMenuId || !addStartTime || !addCustomerName || !addCustomerPhone) {
+    if (!addDate || !addTraineeId || !addMenuId || !addStartTime || !addCustomerName || !addCustomerPhone) {
       alert('すべての必須項目を入力してください')
       return
     }
@@ -171,7 +262,7 @@ export default function ReservationsPage() {
       reservation_number: reservationNumber,
       trainee_id: addTraineeId,
       menu_id: addMenuId,
-      date: selectedDate,
+      date: addDate,
       start_time: addStartTime + ':00',
       end_time: endTime,
       customer_name: addCustomerName,
@@ -185,21 +276,20 @@ export default function ReservationsPage() {
       return
     }
 
-    // 管理者にメール通知を送信
+    // Slack通知を送信
     const trainee = trainees.find(t => t.id === addTraineeId)
     try {
-      await fetch('/api/send-email', {
+      await fetch('/api/send-slack', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          type: 'admin_notification',
           reservation: newReservation,
           trainee: trainee,
           menu: menu
         })
       })
-    } catch (emailError) {
-      console.error('Email notification failed:', emailError)
+    } catch (slackError) {
+      console.error('Slack notification failed:', slackError)
     }
 
     alert('✅ 予約を追加しました\n予約番号: ' + reservationNumber)
@@ -465,7 +555,7 @@ export default function ReservationsPage() {
                     </div>
                   </div>
                   <button
-                    onClick={() => handleCancel(res.id)}
+                    onClick={() => openCancelModal(res)}
                     className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg text-base font-bold"
                   >
                     キャンセル
@@ -544,7 +634,10 @@ export default function ReservationsPage() {
 
                   <div className="flex gap-3 pt-4">
                     <button
-                      onClick={() => handleCancel(selectedReservation.id)}
+                      onClick={() => {
+                        setShowDetailModal(false)
+                        openCancelModal(selectedReservation)
+                      }}
                       className="flex-1 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold text-lg"
                     >
                       この予約をキャンセル
@@ -554,6 +647,96 @@ export default function ReservationsPage() {
                       className="px-6 py-3 bg-gray-200 text-gray-900 rounded-lg hover:bg-gray-300 font-bold text-lg"
                     >
                       閉じる
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* キャンセル確認モーダル */}
+        {showCancelModal && selectedReservation && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-lg w-full">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-2xl font-bold text-gray-900">予約キャンセル</h2>
+                  <button
+                    onClick={() => setShowCancelModal(false)}
+                    className="text-gray-500 hover:text-gray-900 text-3xl leading-none"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-900 font-bold mb-2">キャンセル対象</p>
+                    <p className="text-base text-gray-900">
+                      {format(new Date(selectedReservation.date), 'M月d日(E)', { locale: ja })} {selectedReservation.start_time.slice(0, 5)}
+                    </p>
+                    <p className="text-base text-gray-900">
+                      {selectedReservation.trainee?.name} - {selectedReservation.customer_name}様
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-base font-bold text-gray-900 mb-2">キャンセル理由 *</label>
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-3 p-3 border-2 border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                        <input
+                          type="radio"
+                          name="cancelledBy"
+                          value="salon"
+                          checked={cancelledBy === 'salon'}
+                          onChange={() => setCancelledBy('salon')}
+                          className="w-5 h-5"
+                        />
+                        <div>
+                          <div className="font-bold text-gray-900">サロン都合</div>
+                          <div className="text-sm text-gray-600">研修生の都合・店舗都合など</div>
+                        </div>
+                      </label>
+                      <label className="flex items-center gap-3 p-3 border-2 border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                        <input
+                          type="radio"
+                          name="cancelledBy"
+                          value="customer"
+                          checked={cancelledBy === 'customer'}
+                          onChange={() => setCancelledBy('customer')}
+                          className="w-5 h-5"
+                        />
+                        <div>
+                          <div className="font-bold text-gray-900">モデル都合</div>
+                          <div className="text-sm text-gray-600">お客様のキャンセル</div>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-base font-bold text-gray-900 mb-2">補足メモ（任意）</label>
+                    <textarea
+                      value={cancellationReason}
+                      onChange={e => setCancellationReason(e.target.value)}
+                      placeholder="キャンセル理由の詳細があれば記入してください"
+                      className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-base text-gray-900 h-24"
+                    />
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <button
+                      onClick={handleCancel}
+                      className="flex-1 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold text-lg"
+                    >
+                      キャンセルを確定
+                    </button>
+                    <button
+                      onClick={() => setShowCancelModal(false)}
+                      className="px-6 py-3 bg-gray-200 text-gray-900 rounded-lg hover:bg-gray-300 font-bold text-lg"
+                    >
+                      戻る
                     </button>
                   </div>
                 </div>
@@ -579,10 +762,26 @@ export default function ReservationsPage() {
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-base font-bold text-gray-900 mb-2">研修生</label>
+                    <label className="block text-base font-bold text-gray-900 mb-2">日付 *</label>
+                    <input
+                      type="date"
+                      value={addDate}
+                      onChange={e => {
+                        setAddDate(e.target.value)
+                        loadAvailableTimes(e.target.value, addTraineeId)
+                      }}
+                      className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-base font-bold text-gray-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-base font-bold text-gray-900 mb-2">研修生 *</label>
                     <select
                       value={addTraineeId}
-                      onChange={e => setAddTraineeId(e.target.value)}
+                      onChange={e => {
+                        setAddTraineeId(e.target.value)
+                        loadAvailableTimes(addDate, e.target.value)
+                      }}
                       className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-base font-bold text-gray-900"
                     >
                       <option value="">選択してください</option>
@@ -608,12 +807,22 @@ export default function ReservationsPage() {
 
                   <div>
                     <label className="block text-base font-bold text-gray-900 mb-2">開始時刻 *</label>
-                    <input
-                      type="time"
-                      value={addStartTime}
-                      onChange={e => setAddStartTime(e.target.value)}
-                      className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-base font-bold text-gray-900"
-                    />
+                    {availableTimes.length > 0 ? (
+                      <select
+                        value={addStartTime}
+                        onChange={e => setAddStartTime(e.target.value)}
+                        className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-base font-bold text-gray-900"
+                      >
+                        <option value="">選択してください</option>
+                        {availableTimes.map(time => (
+                          <option key={time} value={time}>{time}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-base text-gray-400 bg-gray-50">
+                        {addDate && addTraineeId ? 'シフトが未設定です' : '日付と研修生を選択してください'}
+                      </div>
+                    )}
                   </div>
 
                   <div>
