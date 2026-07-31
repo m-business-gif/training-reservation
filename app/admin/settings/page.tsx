@@ -41,16 +41,56 @@ export default function SettingsPage() {
   }
 
   async function deleteTrainee(id: string) {
-    if (!confirm('本当に削除しますか？\n\n※この研修生に関連するシフトや予約がある場合は削除できません。')) return
+    // 関連データの件数を確認
+    const [shiftsResult, reservationsResult] = await Promise.all([
+      supabase.from('shift').select('id', { count: 'exact', head: true }).eq('trainee_id', id),
+      supabase.from('reservation').select('id', { count: 'exact', head: true }).eq('trainee_id', id)
+    ])
 
+    const shiftsCount = shiftsResult.count ?? 0
+    const reservationsCount = reservationsResult.count ?? 0
+
+    const message = `本当に削除しますか？
+
+【関連データも一緒に削除されます】
+・シフト: ${shiftsCount}件
+・予約: ${reservationsCount}件
+
+※この操作は取り消せません。`
+
+    if (!confirm(message)) return
+
+    // まず予約を削除
+    if (reservationsCount > 0) {
+      const { error: reservationError } = await supabase
+        .from('reservation')
+        .delete()
+        .eq('trainee_id', id)
+
+      if (reservationError) {
+        alert('❌ 予約の削除に失敗しました\n\n' + reservationError.message)
+        return
+      }
+    }
+
+    // 次にシフトを削除（CASCADE設定されているが念のため）
+    if (shiftsCount > 0) {
+      const { error: shiftError } = await supabase
+        .from('shift')
+        .delete()
+        .eq('trainee_id', id)
+
+      if (shiftError) {
+        alert('❌ シフトの削除に失敗しました\n\n' + shiftError.message)
+        return
+      }
+    }
+
+    // 最後に研修生を削除
     const { error } = await supabase.from('trainee').delete().eq('id', id)
 
     if (error) {
-      if (error.code === '23503') {
-        alert('❌ 削除できません\n\nこの研修生に関連するシフトまたは予約が存在します。\n先にシフトと予約を削除してから、再度お試しください。')
-      } else {
-        alert('❌ 削除に失敗しました\n\n' + error.message)
-      }
+      alert('❌ 削除に失敗しました\n\n' + error.message)
       return
     }
 
@@ -76,16 +116,41 @@ export default function SettingsPage() {
   }
 
   async function deleteMenu(id: string) {
-    if (!confirm('本当に削除しますか？\n\n※このメニューに関連するシフトや予約がある場合は削除できません。')) return
+    // 関連データの件数を確認
+    const { count } = await supabase
+      .from('reservation')
+      .select('id', { count: 'exact', head: true })
+      .eq('menu_id', id)
 
+    const reservationsCount = count ?? 0
+
+    const message = `本当に削除しますか？
+
+【関連データも一緒に削除されます】
+・予約: ${reservationsCount}件
+
+※この操作は取り消せません。`
+
+    if (!confirm(message)) return
+
+    // まず予約を削除
+    if (reservationsCount > 0) {
+      const { error: reservationError } = await supabase
+        .from('reservation')
+        .delete()
+        .eq('menu_id', id)
+
+      if (reservationError) {
+        alert('❌ 予約の削除に失敗しました\n\n' + reservationError.message)
+        return
+      }
+    }
+
+    // 最後にメニューを削除
     const { error } = await supabase.from('menu').delete().eq('id', id)
 
     if (error) {
-      if (error.code === '23503') {
-        alert('❌ 削除できません\n\nこのメニューに関連するシフトまたは予約が存在します。\n先にシフトと予約を削除してから、再度お試しください。')
-      } else {
-        alert('❌ 削除に失敗しました\n\n' + error.message)
-      }
+      alert('❌ 削除に失敗しました\n\n' + error.message)
       return
     }
 
