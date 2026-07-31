@@ -41,8 +41,20 @@ export default function SettingsPage() {
   }
 
   async function deleteTrainee(id: string) {
-    if (!confirm('本当に削除しますか？')) return
-    await supabase.from('trainee').delete().eq('id', id)
+    if (!confirm('本当に削除しますか？\n\n※この研修生に関連するシフトや予約がある場合は削除できません。')) return
+
+    const { error } = await supabase.from('trainee').delete().eq('id', id)
+
+    if (error) {
+      if (error.code === '23503') {
+        alert('❌ 削除できません\n\nこの研修生に関連するシフトまたは予約が存在します。\n先にシフトと予約を削除してから、再度お試しください。')
+      } else {
+        alert('❌ 削除に失敗しました\n\n' + error.message)
+      }
+      return
+    }
+
+    alert('✅ 削除しました')
     loadData()
   }
 
@@ -64,8 +76,25 @@ export default function SettingsPage() {
   }
 
   async function deleteMenu(id: string) {
-    if (!confirm('本当に削除しますか？')) return
-    await supabase.from('menu').delete().eq('id', id)
+    if (!confirm('本当に削除しますか？\n\n※このメニューに関連するシフトや予約がある場合は削除できません。')) return
+
+    const { error } = await supabase.from('menu').delete().eq('id', id)
+
+    if (error) {
+      if (error.code === '23503') {
+        alert('❌ 削除できません\n\nこのメニューに関連するシフトまたは予約が存在します。\n先にシフトと予約を削除してから、再度お試しください。')
+      } else {
+        alert('❌ 削除に失敗しました\n\n' + error.message)
+      }
+      return
+    }
+
+    alert('✅ 削除しました')
+    loadData()
+  }
+
+  async function toggleTraineeActive(id: string, is_active: boolean) {
+    await supabase.from('trainee').update({ is_active: !is_active }).eq('id', id)
     loadData()
   }
 
@@ -108,13 +137,26 @@ export default function SettingsPage() {
           <div className="space-y-2">
             {trainees.map(t => (
               <div key={t.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <span className="font-bold text-gray-900 text-lg">{t.name}</span>
-                <button
-                  onClick={() => deleteTrainee(t.id)}
-                  className="px-3 py-1 text-red-600 hover:bg-red-50 rounded text-sm font-bold"
-                >
-                  削除
-                </button>
+                <div>
+                  <span className="font-bold text-gray-900 text-lg">{t.name}</span>
+                  {!t.is_active && (
+                    <span className="ml-2 text-xs bg-gray-300 text-gray-900 px-2 py-1 rounded font-bold">非表示</span>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => toggleTraineeActive(t.id, t.is_active)}
+                    className="px-3 py-1 text-sm text-gray-900 hover:bg-gray-100 rounded font-bold"
+                  >
+                    {t.is_active ? '非表示' : '表示'}
+                  </button>
+                  <button
+                    onClick={() => deleteTrainee(t.id)}
+                    className="px-3 py-1 text-red-600 hover:bg-red-50 rounded text-sm font-bold"
+                  >
+                    削除
+                  </button>
+                </div>
               </div>
             ))}
           </div>
