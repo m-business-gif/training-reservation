@@ -41,16 +41,11 @@ export default function SettingsPage() {
   }
 
   async function deleteTrainee(id: string) {
-    console.log('削除開始:', id)
-
     // 関連データの件数を確認
     const [shiftsResult, reservationsResult] = await Promise.all([
       supabase.from('shift').select('id', { count: 'exact', head: true }).eq('trainee_id', id),
       supabase.from('reservation').select('id', { count: 'exact', head: true }).eq('trainee_id', id)
     ])
-
-    console.log('シフト結果:', shiftsResult)
-    console.log('予約結果:', reservationsResult)
 
     const shiftsCount = shiftsResult.count ?? 0
     const reservationsCount = reservationsResult.count ?? 0
@@ -63,64 +58,42 @@ export default function SettingsPage() {
 
 ※この操作は取り消せません。`
 
-    if (!confirm(message)) {
-      console.log('削除がキャンセルされました')
-      return
-    }
-
-    console.log('削除を実行します')
+    if (!confirm(message)) return
 
     // まず予約を削除
     if (reservationsCount > 0) {
-      console.log('予約を削除中...')
       const { error: reservationError } = await supabase
         .from('reservation')
         .delete()
         .eq('trainee_id', id)
 
       if (reservationError) {
-        console.error('予約削除エラー:', reservationError)
         alert('❌ 予約の削除に失敗しました\n\n' + reservationError.message)
         return
       }
-      console.log('予約削除完了')
     }
 
-    // 次にシフトを削除（CASCADE設定されているが念のため）
+    // 次にシフトを削除
     if (shiftsCount > 0) {
-      console.log('シフトを削除中...')
       const { error: shiftError } = await supabase
         .from('shift')
         .delete()
         .eq('trainee_id', id)
 
       if (shiftError) {
-        console.error('シフト削除エラー:', shiftError)
         alert('❌ シフトの削除に失敗しました\n\n' + shiftError.message)
         return
       }
-      console.log('シフト削除完了')
     }
 
     // 最後に研修生を削除
-    console.log('研修生を削除中...')
-    const { error, data } = await supabase.from('trainee').delete().eq('id', id).select()
-
-    console.log('削除結果:', { error, data })
+    const { error } = await supabase.from('trainee').delete().eq('id', id)
 
     if (error) {
-      console.error('研修生削除エラー:', error)
       alert('❌ 削除に失敗しました\n\n' + error.message)
       return
     }
 
-    if (!data || data.length === 0) {
-      console.warn('削除対象が見つかりませんでした')
-      alert('⚠️ 削除対象が見つかりませんでした')
-      return
-    }
-
-    console.log('削除成功')
     alert('✅ 削除しました')
     loadData()
   }
