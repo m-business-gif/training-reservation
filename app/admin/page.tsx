@@ -8,6 +8,7 @@ export default function AdminHome() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [showNotifications, setShowNotifications] = useState(false)
+  const [toastNotification, setToastNotification] = useState<Notification | null>(null)
 
   useEffect(() => {
     loadNotifications()
@@ -27,21 +28,16 @@ export default function AdminHome() {
           setNotifications(prev => [newNotification, ...prev])
           setUnreadCount(prev => prev + 1)
 
-          // ブラウザ通知（権限がある場合）
-          if (Notification.permission === 'granted') {
-            new Notification(newNotification.title, {
-              body: newNotification.message,
-              icon: '/icon.png'
-            })
-          }
+          // アプリ内トースト通知を表示
+          setToastNotification(newNotification)
+
+          // 5秒後に自動的に消す
+          setTimeout(() => {
+            setToastNotification(null)
+          }, 5000)
         }
       )
       .subscribe()
-
-    // ブラウザ通知の権限リクエスト
-    if (Notification.permission === 'default') {
-      Notification.requestPermission()
-    }
 
     return () => {
       channel.unsubscribe()
@@ -92,6 +88,38 @@ export default function AdminHome() {
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
       <div className="max-w-4xl mx-auto">
+        {/* トースト通知 */}
+        {toastNotification && (
+          <div className="fixed top-4 right-4 z-50 animate-slide-in">
+            <div className="bg-white rounded-lg shadow-2xl border-2 border-indigo-500 p-4 max-w-md">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 text-3xl">
+                  {toastNotification.type === 'cancellation' ? '⚠️' : '📅'}
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-gray-900 text-lg mb-1">
+                    {toastNotification.title}
+                  </h3>
+                  <p className="text-sm text-gray-700">
+                    {toastNotification.message}
+                  </p>
+                  {toastNotification.reservation_number && (
+                    <p className="text-xs text-gray-600 mt-2">
+                      予約番号: {toastNotification.reservation_number}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={() => setToastNotification(null)}
+                  className="flex-shrink-0 text-gray-400 hover:text-gray-600 text-xl font-bold"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center justify-between mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">管理画面</h1>
 
