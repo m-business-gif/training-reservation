@@ -69,3 +69,14 @@ export interface CancellationHistory {
   cancellation_reason: string | null
   original_created_at: string | null
 }
+
+export interface Notification {
+  id: string
+  type: 'cancellation' | 'new_reservation'
+  title: string
+  message: string
+  reservation_id: string | null
+  reservation_number: string | null
+  is_read: boolean
+  created_at: string
+}

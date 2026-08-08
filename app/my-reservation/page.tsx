@@ -51,16 +51,22 @@ export default function MyReservationPage() {
   async function handleCancel(reservationId: string) {
     if (!confirm('本当にキャンセルしますか？')) return
 
-    const { error } = await supabase
-      .from('reservation')
-      .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
-      .eq('id', reservationId)
+    try {
+      const response = await fetch('/api/cancel-reservation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reservationId })
+      })
 
-    if (!error) {
-      alert('✅ 予約をキャンセルしました')
-      // 再検索
-      handleSearch()
-    } else {
+      if (response.ok) {
+        alert('✅ 予約をキャンセルしました')
+        // 再検索
+        handleSearch()
+      } else {
+        alert('キャンセルに失敗しました')
+      }
+    } catch (error) {
+      console.error('キャンセルエラー:', error)
       alert('キャンセルに失敗しました')
     }
   }

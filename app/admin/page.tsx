@@ -1,10 +1,161 @@
+'use client'
 import Link from 'next/link'
+import { useState, useEffect } from 'react'
+import { supabase } from '@/lib/supabase'
+import type { Notification } from '@/types/database'
 
 export default function AdminHome() {
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [showNotifications, setShowNotifications] = useState(false)
+
+  useEffect(() => {
+    loadNotifications()
+
+    // リアルタイム通知の購読
+    const channel = supabase
+      .channel('notification-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notification'
+        },
+        (payload) => {
+          const newNotification = payload.new as Notification
+          setNotifications(prev => [newNotification, ...prev])
+          setUnreadCount(prev => prev + 1)
+
+          // ブラウザ通知（権限がある場合）
+          if (Notification.permission === 'granted') {
+            new Notification(newNotification.title, {
+              body: newNotification.message,
+              icon: '/icon.png'
+            })
+          }
+        }
+      )
+      .subscribe()
+
+    // ブラウザ通知の権限リクエスト
+    if (Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+
+    return () => {
+      channel.unsubscribe()
+    }
+  }, [])
+
+  async function loadNotifications() {
+    const { data } = await supabase
+      .from('notification')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(20)
+
+    if (data) {
+      setNotifications(data)
+      setUnreadCount(data.filter(n => !n.is_read).length)
+    }
+  }
+
+  async function markAsRead(id: string) {
+    await supabase
+      .from('notification')
+      .update({ is_read: true })
+      .eq('id', id)
+
+    setNotifications(prev =>
+      prev.map(n => n.id === id ? { ...n, is_read: true } : n)
+    )
+    setUnreadCount(prev => Math.max(0, prev - 1))
+  }
+
+  async function markAllAsRead() {
+    const unreadIds = notifications.filter(n => !n.is_read).map(n => n.id)
+
+    if (unreadIds.length === 0) return
+
+    await supabase
+      .from('notification')
+      .update({ is_read: true })
+      .in('id', unreadIds)
+
+    setNotifications(prev =>
+      prev.map(n => ({ ...n, is_read: true }))
+    )
+    setUnreadCount(0)
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 sm:mb-8">管理画面</h1>
+        <div className="flex items-center justify-between mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">管理画面</h1>
+
+          {/* 通知ベル */}
+          <button
+            onClick={() => setShowNotifications(!showNotifications)}
+            className="relative p-3 bg-white rounded-full shadow hover:shadow-lg transition-all"
+          >
+            <span className="text-2xl">🔔</span>
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                {unreadCount}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* 通知パネル */}
+        {showNotifications && (
+          <div className="bg-white rounded-lg shadow-lg p-4 mb-6 max-h-96 overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">通知</h2>
+              {unreadCount > 0 && (
+                <button
+                  onClick={markAllAsRead}
+                  className="text-sm text-indigo-600 hover:text-indigo-700 font-bold"
+                >
+                  すべて既読にする
+                </button>
+              )}
+            </div>
+
+            {notifications.length === 0 ? (
+              <p className="text-gray-600 text-center py-4">通知はありません</p>
+            ) : (
+              <div className="space-y-2">
+                {notifications.map(notification => (
+                  <div
+                    key={notification.id}
+                    className={`p-3 rounded-lg border-2 ${
+                      notification.is_read
+                        ? 'bg-gray-50 border-gray-200'
+                        : 'bg-indigo-50 border-indigo-200'
+                    }`}
+                    onClick={() => !notification.is_read && markAsRead(notification.id)}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="font-bold text-gray-900">{notification.title}</p>
+                        <p className="text-sm text-gray-700 mt-1">{notification.message}</p>
+                        <p className="text-xs text-gray-600 mt-2">
+                          {new Date(notification.created_at).toLocaleString('ja-JP')}
+                        </p>
+                      </div>
+                      {!notification.is_read && (
+                        <span className="ml-2 w-2 h-2 bg-indigo-600 rounded-full"></span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           <Link
