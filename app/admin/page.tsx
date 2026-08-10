@@ -29,12 +29,7 @@ export default function AdminHome() {
           setUnreadCount(prev => prev + 1)
 
           // アプリ内トースト通知を表示
-          setToastNotification(newNotification)
-
-          // 5秒後に自動的に消す
-          setTimeout(() => {
-            setToastNotification(null)
-          }, 5000)
+          showToast(newNotification)
         }
       )
       .subscribe()
@@ -53,8 +48,23 @@ export default function AdminHome() {
 
     if (data) {
       setNotifications(data)
-      setUnreadCount(data.filter(n => !n.is_read).length)
+      const unreadNotifications = data.filter(n => !n.is_read)
+      setUnreadCount(unreadNotifications.length)
+
+      // 未読通知がある場合、最新の1件をトースト表示
+      if (unreadNotifications.length > 0) {
+        showToast(unreadNotifications[0])
+      }
     }
+  }
+
+  function showToast(notification: Notification) {
+    setToastNotification(notification)
+
+    // 5秒後に自動的に消す
+    setTimeout(() => {
+      setToastNotification(null)
+    }, 5000)
   }
 
   async function markAsRead(id: string) {
