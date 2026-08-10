@@ -20,6 +20,13 @@ export default function ShiftsPage() {
     { start_time: '09:00', end_time: '19:00', menu_ids: [], available_times: [] }
   ])
 
+  // コピーモーダル
+  const [showCopyModal, setShowCopyModal] = useState(false)
+  const [copySourceTrainee, setCopySourceTrainee] = useState<Trainee | null>(null)
+  const [copyTargetTraineeId, setCopyTargetTraineeId] = useState<string>('')
+  const [copyStartDate, setCopyStartDate] = useState<string>('')
+  const [copyEndDate, setCopyEndDate] = useState<string>('')
+
   const monthStart = startOfMonth(currentMonth)
   const monthEnd = endOfMonth(currentMonth)
   const days = eachDayOfInterval({ start: monthStart, end: monthEnd })
@@ -215,6 +222,78 @@ export default function ShiftsPage() {
     }
   }
 
+  function openCopyModal(trainee: Trainee) {
+    setCopySourceTrainee(trainee)
+    setCopyTargetTraineeId('')
+    setCopyStartDate(format(monthStart, 'yyyy-MM-dd'))
+    setCopyEndDate(format(monthEnd, 'yyyy-MM-dd'))
+    setShowCopyModal(true)
+  }
+
+  async function handleCopyShift() {
+    if (!copySourceTrainee || !copyTargetTraineeId || !copyStartDate || !copyEndDate) {
+      alert('すべての項目を入力してください')
+      return
+    }
+
+    if (copySourceTrainee.id === copyTargetTraineeId) {
+      alert('コピー元とコピー先が同じです')
+      return
+    }
+
+    if (!confirm(`${copySourceTrainee.name}のシフトを、選択した研修生にコピーしますか？`)) {
+      return
+    }
+
+    // コピー元のシフトを取得
+    const { data: sourceShifts, error: fetchError } = await supabase
+      .from('shift')
+      .select('*')
+      .eq('trainee_id', copySourceTrainee.id)
+      .gte('date', copyStartDate)
+      .lte('date', copyEndDate)
+
+    if (fetchError || !sourceShifts || sourceShifts.length === 0) {
+      alert('コピー元のシフトが見つかりません')
+      return
+    }
+
+    // コピー先に既存のシフトがあれば削除
+    const { error: deleteError } = await supabase
+      .from('shift')
+      .delete()
+      .eq('trainee_id', copyTargetTraineeId)
+      .gte('date', copyStartDate)
+      .lte('date', copyEndDate)
+
+    if (deleteError) {
+      alert('既存シフトの削除に失敗しました')
+      return
+    }
+
+    // 新しいシフトを作成
+    const newShifts = sourceShifts.map(shift => ({
+      trainee_id: copyTargetTraineeId,
+      date: shift.date,
+      time_slots: shift.time_slots,
+      break_start: shift.break_start,
+      break_end: shift.break_end
+    }))
+
+    const { error: insertError } = await supabase
+      .from('shift')
+      .insert(newShifts)
+
+    if (insertError) {
+      alert('シフトのコピーに失敗しました')
+      return
+    }
+
+    alert(`✅ ${sourceShifts.length}件のシフトをコピーしました`)
+    setShowCopyModal(false)
+    loadMonthShifts()
+  }
+
   function getCellStatus(trainee: Trainee, date: Date): string {
     const dateStr = format(date, 'yyyy-MM-dd')
     const key = `${trainee.id}-${dateStr}`
@@ -306,8 +385,17 @@ export default function ShiftsPage() {
 
                 return (
                   <tr key={trainee.id} className="hover:bg-gray-50">
-                    <td className="border border-gray-300 p-2 font-bold text-gray-900 text-base sticky left-0 bg-white z-10">
-                      {trainee.name}
+                    <td className="border border-gray-300 p-2 sticky left-0 bg-white z-10">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-gray-900 text-base">{trainee.name}</span>
+                        <button
+                          onClick={() => openCopyModal(trainee)}
+                          className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-xs font-bold hover:bg-indigo-200"
+                          title="このシフトを他の研修生にコピー"
+                        >
+                          📋
+                        </button>
+                      </div>
                     </td>
                     <td className="border border-gray-300 p-2 text-center text-sm text-gray-900">
                       <div>出: {setCount}日</div>
@@ -525,6 +613,87 @@ export default function ShiftsPage() {
                 </button>
                 <button
                   onClick={() => setShowModal(false)}
+                  className="px-6 py-3 bg-gray-200 text-gray-900 rounded-lg hover:bg-gray-300 font-bold text-lg"
+                >
+                  キャンセル
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* コピーモーダル */}
+      {showCopyModal && copySourceTrainee && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-md">
+            <div className="p-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">シフトをコピー</h2>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-base font-bold text-gray-900 mb-2">コピー元</label>
+                  <div className="p-3 bg-gray-100 rounded-lg">
+                    <p className="text-lg font-bold text-gray-900">{copySourceTrainee.name}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-base font-bold text-gray-900 mb-2">コピー先 *</label>
+                  <select
+                    value={copyTargetTraineeId}
+                    onChange={e => setCopyTargetTraineeId(e.target.value)}
+                    className="w-full border-2 border-gray-300 rounded-lg px-3 py-3 text-base font-bold text-gray-900"
+                  >
+                    <option value="">選択してください</option>
+                    {trainees
+                      .filter(t => t.id !== copySourceTrainee.id)
+                      .map(t => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-base font-bold text-gray-900 mb-2">コピー期間</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm text-gray-700 mb-1">開始日</label>
+                      <input
+                        type="date"
+                        value={copyStartDate}
+                        onChange={e => setCopyStartDate(e.target.value)}
+                        className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm font-bold text-gray-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-700 mb-1">終了日</label>
+                      <input
+                        type="date"
+                        value={copyEndDate}
+                        onChange={e => setCopyEndDate(e.target.value)}
+                        className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm font-bold text-gray-900"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-3">
+                  <p className="text-sm text-yellow-900 font-bold">
+                    ⚠️ コピー先の期間内の既存シフトは上書きされます
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={handleCopyShift}
+                  className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-bold text-lg"
+                >
+                  コピー実行
+                </button>
+                <button
+                  onClick={() => setShowCopyModal(false)}
                   className="px-6 py-3 bg-gray-200 text-gray-900 rounded-lg hover:bg-gray-300 font-bold text-lg"
                 >
                   キャンセル
