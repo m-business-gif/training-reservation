@@ -225,23 +225,22 @@ export default function ShiftsPage() {
   function openCopyModal(trainee: Trainee) {
     setCopySourceTrainee(trainee)
     setCopyTargetTraineeId('')
+    // 当月全体を自動設定
     setCopyStartDate(format(monthStart, 'yyyy-MM-dd'))
     setCopyEndDate(format(monthEnd, 'yyyy-MM-dd'))
     setShowCopyModal(true)
   }
 
   async function handleCopyShift() {
-    if (!copySourceTrainee || !copyTargetTraineeId || !copyStartDate || !copyEndDate) {
-      alert('すべての項目を入力してください')
+    if (!copySourceTrainee || !copyTargetTraineeId) {
+      alert('コピー先の研修生を選択してください')
       return
     }
 
-    if (copySourceTrainee.id === copyTargetTraineeId) {
-      alert('コピー元とコピー先が同じです')
-      return
-    }
+    const targetTrainee = trainees.find(t => t.id === copyTargetTraineeId)
+    if (!targetTrainee) return
 
-    if (!confirm(`${copySourceTrainee.name}のシフトを、選択した研修生にコピーしますか？`)) {
+    if (!confirm(`${copySourceTrainee.name}のシフトを\n${targetTrainee.name}にコピーしますか？\n\n※${targetTrainee.name}の今月のシフトは全て削除されます`)) {
       return
     }
 
@@ -386,15 +385,16 @@ export default function ShiftsPage() {
                 return (
                   <tr key={trainee.id} className="hover:bg-gray-50">
                     <td className="border border-gray-300 p-2 sticky left-0 bg-white z-10">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-bold text-gray-900 text-base">{trainee.name}</span>
-                        <button
-                          onClick={() => openCopyModal(trainee)}
-                          className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-xs font-bold hover:bg-indigo-200"
-                          title="このシフトを他の研修生にコピー"
-                        >
-                          📋
-                        </button>
+                      <div className="space-y-2">
+                        <div className="font-bold text-gray-900 text-base">{trainee.name}</div>
+                        {setCount > 0 && (
+                          <button
+                            onClick={() => openCopyModal(trainee)}
+                            className="w-full px-2 py-1 bg-green-500 text-white rounded text-xs font-bold hover:bg-green-600"
+                          >
+                            シフトをコピー
+                          </button>
+                        )}
                       </div>
                     </td>
                     <td className="border border-gray-300 p-2 text-center text-sm text-gray-900">
@@ -626,26 +626,36 @@ export default function ShiftsPage() {
       {/* コピーモーダル */}
       {showCopyModal && copySourceTrainee && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-2xl w-full max-w-md">
-            <div className="p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">シフトをコピー</h2>
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg">
+            <div className="p-6 sm:p-8">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">
+                📋 シフトをコピー
+              </h2>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-base font-bold text-gray-900 mb-2">コピー元</label>
-                  <div className="p-3 bg-gray-100 rounded-lg">
-                    <p className="text-lg font-bold text-gray-900">{copySourceTrainee.name}</p>
-                  </div>
+              <div className="space-y-6">
+                {/* コピー元 */}
+                <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
+                  <p className="text-sm text-blue-900 font-bold mb-2">コピー元</p>
+                  <p className="text-2xl font-bold text-blue-900">{copySourceTrainee.name}</p>
+                  <p className="text-sm text-blue-700 mt-2">
+                    {format(currentMonth, 'yyyy年M月', { locale: ja })}のシフト
+                  </p>
                 </div>
 
+                {/* 矢印 */}
+                <div className="text-center text-4xl text-gray-400">↓</div>
+
+                {/* コピー先 */}
                 <div>
-                  <label className="block text-base font-bold text-gray-900 mb-2">コピー先 *</label>
+                  <label className="block text-lg font-bold text-gray-900 mb-3">
+                    どの研修生にコピーしますか？
+                  </label>
                   <select
                     value={copyTargetTraineeId}
                     onChange={e => setCopyTargetTraineeId(e.target.value)}
-                    className="w-full border-2 border-gray-300 rounded-lg px-3 py-3 text-base font-bold text-gray-900"
+                    className="w-full border-2 border-gray-300 rounded-lg px-4 py-4 text-lg font-bold text-gray-900"
                   >
-                    <option value="">選択してください</option>
+                    <option value="">研修生を選んでください</option>
                     {trainees
                       .filter(t => t.id !== copySourceTrainee.id)
                       .map(t => (
@@ -654,49 +664,28 @@ export default function ShiftsPage() {
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-base font-bold text-gray-900 mb-2">コピー期間</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm text-gray-700 mb-1">開始日</label>
-                      <input
-                        type="date"
-                        value={copyStartDate}
-                        onChange={e => setCopyStartDate(e.target.value)}
-                        className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm font-bold text-gray-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm text-gray-700 mb-1">終了日</label>
-                      <input
-                        type="date"
-                        value={copyEndDate}
-                        onChange={e => setCopyEndDate(e.target.value)}
-                        className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm font-bold text-gray-900"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-3">
-                  <p className="text-sm text-yellow-900 font-bold">
-                    ⚠️ コピー先の期間内の既存シフトは上書きされます
+                {/* 警告 */}
+                <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4">
+                  <p className="text-base text-red-900 font-bold">
+                    ⚠️ コピー先の今月のシフトは全て削除されて、{copySourceTrainee.name}と同じシフトになります
                   </p>
                 </div>
               </div>
 
-              <div className="flex gap-3 mt-6">
+              {/* ボタン */}
+              <div className="flex flex-col sm:flex-row gap-3 mt-8">
                 <button
                   onClick={handleCopyShift}
-                  className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-bold text-lg"
+                  disabled={!copyTargetTraineeId}
+                  className="flex-1 px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-bold text-xl"
                 >
-                  コピー実行
+                  コピーする
                 </button>
                 <button
                   onClick={() => setShowCopyModal(false)}
-                  className="px-6 py-3 bg-gray-200 text-gray-900 rounded-lg hover:bg-gray-300 font-bold text-lg"
+                  className="px-6 py-4 bg-gray-200 text-gray-900 rounded-lg hover:bg-gray-300 font-bold text-xl"
                 >
-                  キャンセル
+                  やめる
                 </button>
               </div>
             </div>
