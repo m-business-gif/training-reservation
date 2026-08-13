@@ -23,12 +23,6 @@ export default function Home() {
             <p className="text-gray-900 text-sm sm:text-base">予約番号で予約内容を確認・キャンセルできます</p>
           </a>
         </div>
-
-        <div className="text-center mt-8 sm:mt-12">
-          <a href="/admin" className="text-gray-600 hover:text-gray-900 text-sm">
-            管理者の方はこちら
-          </a>
-        </div>
       </div>
     </div>
   )
