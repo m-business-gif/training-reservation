@@ -8,6 +8,15 @@ const withPWA = require('next-pwa')({
 });
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        destination: 'https://ssin-training-reservation.vercel.app/:path*',
+        permanent: true,
+      },
+    ];
+  },
   // Turbopack用の空設定を追加してエラーを回避
   turbopack: {},
 };
