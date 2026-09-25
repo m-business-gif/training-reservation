@@ -1,0 +1,9 @@
+{
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "destination": "https://ssin-training-reservation.vercel.app/$1",
+      "permanent": true
+    }
+  ]
+}
